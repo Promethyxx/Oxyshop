@@ -1,0 +1,120 @@
+import { Palette } from "palette.slint";
+import { SyncBadge, IconBtn } from "components.slint";
+
+export struct MealOption {
+    emoji: string,
+    text: string,
+}
+
+export struct MealSlot {
+    time: string,
+    label: string,
+    accent: color,
+    // if has-options == false, use detail
+    has-options: bool,
+    detail: string,
+    options: [MealOption],
+}
+
+export component MenuView inherits Rectangle {
+    background: Palette.bg;
+
+    in property <[MealSlot]> meals;
+    in property <int>  sync-state;
+    in property <string> sync-label;
+    callback theme-toggle;
+
+    VerticalLayout {
+        padding: 20px; spacing: 0px;
+
+        // Header
+        HorizontalLayout {
+            alignment: stretch; spacing: 8px;
+            VerticalLayout {
+                spacing: 2px; horizontal-stretch: 1;
+                Text { text: "Repas du Jour"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+                Text { text: "Plan nutritionnel de référence"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+            }
+            HorizontalLayout {
+                spacing: 6px; alignment: end;
+                SyncBadge { state: root.sync-state; label: root.sync-label; }
+                IconBtn {
+                    label: Palette.dark ? "🌙" : "☀️";
+                    clicked => { root.theme-toggle(); }
+                }
+            }
+        }
+
+        Rectangle { height: 20px; }
+
+        Flickable {
+            vertical-stretch: 1;
+            viewport-height: meals-col.preferred-height;
+
+            meals-col := VerticalLayout {
+                spacing: 10px;
+
+                for meal in root.meals : Rectangle {
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: Palette.card-border;
+                    background: Palette.card;
+                    // left accent bar
+                    Rectangle {
+                        x: 0px; y: 0px;
+                        width: 3px; height: parent.height;
+                        border-radius: 2px;
+                        background: meal.accent;
+                    }
+
+                    VerticalLayout {
+                        padding-left: 14px; padding-right: 14px;
+                        padding-top: 12px; padding-bottom: 12px;
+                        spacing: 4px;
+
+                        Text {
+                            text: meal.time;
+                            font-size: Palette.fs-md - 0.5px; font-weight: 600;
+                            color: meal.accent;
+                            letter-spacing: 1px;
+                        }
+                        Text {
+                            text: meal.label;
+                            font-size: Palette.fs-lg; font-weight: 700;
+                            color: Palette.text;
+                        }
+
+                        if !meal.has-options : Text {
+                            text: meal.detail;
+                            font-size: Palette.fs - 0.5px; color: Palette.text2;
+                            wrap: word-wrap;
+                        }
+
+                        if meal.has-options : VerticalLayout {
+                            spacing: 4px;
+                            padding-top: 4px;
+
+                            for opt in meal.options : Rectangle {
+                                border-radius: 8px;
+                                background: rgba(255,255,255,0.02);
+
+                                HorizontalLayout {
+                                    padding-top: 6px; padding-bottom: 6px;
+                                padding-left: 8px; padding-right: 8px;
+                                    spacing: 8px; alignment: start;
+                                    Text { text: opt.emoji; font-size: 15px; }
+                                    Text {
+                                        text: opt.text;
+                                        font-size: Palette.fs - 0.5px; color: Palette.text2;
+                                        wrap: word-wrap;
+                                        horizontal-stretch: 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

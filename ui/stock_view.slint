@@ -1,0 +1,216 @@
+import { Palette } from "palette.slint";
+import { StatCard, SearchBar, ActionBtn, IconBtn, PmBtn } from "components.slint";
+
+export struct StockItem {
+    name: string,
+    cat: string,
+    qty: int,
+    obj: int,
+    global-index: int,
+}
+
+export struct CatGroup {
+    name: string,
+    icon: string,
+    color: color,
+    items: [StockItem],
+    missing: int,
+    open: bool,
+}
+
+export component StockView inherits Rectangle {
+    background: Palette.bg;
+
+    in property <int> stat-total;
+    in property <int> stat-ok;
+    in property <int> stat-low;
+    in property <int> stat-empty;
+    in property <[CatGroup]> categories;
+    in-out property <string> search-text;
+
+    callback search-changed(string);
+    callback add-clicked;
+    callback export-clicked;
+    callback import-clicked;
+    callback theme-toggle;
+    callback font-smaller;
+    callback font-larger;
+    callback inc(int);
+    callback dec(int);
+    callback ctx-edit(int);
+    callback ctx-delete(int);
+    callback ctx-obj(int);
+    callback obj-clicked(int);
+    callback toggle-cat(string);
+
+    VerticalLayout {
+        padding: 20px; spacing: 0px;
+
+        // Header
+        HorizontalLayout {
+            alignment: stretch; spacing: 8px;
+            VerticalLayout {
+                spacing: 2px; horizontal-stretch: 1;
+                Text { text: "Mon Stock"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+                Text { text: "Tap long = éditer · Tap objectif = modifier"; font-size: Palette.fs-xs; color: Palette.text2; }
+            }
+            HorizontalLayout {
+                spacing: 6px; alignment: end;
+                IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { root.theme-toggle(); } }
+                IconBtn { label: "A−"; clicked => { root.font-smaller(); } }
+                IconBtn { label: "A+"; clicked => { root.font-larger(); } }
+            }
+        }
+
+        Rectangle { height: 16px; }
+
+        // Stats
+        HorizontalLayout {
+            spacing: 8px; height: 64px;
+            StatCard { num: root.stat-total; lbl: "ARTICLES"; horizontal-stretch: 1; }
+            StatCard { num: root.stat-ok;    lbl: "OK";       num-color: Palette.green;  horizontal-stretch: 1; }
+            StatCard { num: root.stat-low;   lbl: "BAS";      num-color: Palette.amber;  horizontal-stretch: 1; }
+            StatCard { num: root.stat-empty; lbl: "MANQUANTS"; num-color: Palette.danger; horizontal-stretch: 1; }
+        }
+
+        Rectangle { height: 12px; }
+
+        // Toolbar
+        HorizontalLayout {
+            spacing: 8px; height: 38px;
+            SearchBar {
+                horizontal-stretch: 1;
+                text <=> root.search-text;
+                placeholder: "Chercher un article...";
+                edited(t) => { root.search-changed(t); }
+            }
+            ActionBtn {
+                label: "+ Ajouter"; primary: true; small: true;
+                width: 90px;
+                clicked => { root.add-clicked(); }
+            }
+        }
+
+        Rectangle { height: 12px; }
+
+        // List
+        Flickable {
+            vertical-stretch: 1;
+            viewport-height: cat-col.preferred-height;
+
+            cat-col := VerticalLayout {
+                spacing: 10px;
+
+                for grp in root.categories : VerticalLayout {
+                    spacing: 0px;
+
+                    // Category header
+                    cat-hdr := Rectangle {
+                        height: 38px;
+                        border-radius: 8px;
+                        background: cat-ta.pressed ? Palette.card : transparent;
+                        cat-ta := TouchArea { clicked => { root.toggle-cat(grp.name); } }
+                        HorizontalLayout {
+                            padding-left: 4px; padding-right: 4px;
+                            spacing: 8px; alignment: center;
+                            Text { text: grp.icon; font-size: 15px; }
+                            Text { text: grp.name; font-size: Palette.fs; font-weight: 600; color: Palette.text; horizontal-stretch: 1; }
+                            if grp.missing > 0 : Rectangle {
+                                width: miss-txt.preferred-width + 14px; height: 18px; border-radius: 9px;
+                                background: rgba(224,85,85,0.15);
+                                miss-txt := Text { text: grp.missing; font-size: Palette.fs-xs; font-weight: 500; color: Palette.danger; horizontal-alignment: center; vertical-alignment: center; }
+                            }
+                            Text { text: grp.open ? "▾" : "▸"; font-size: Palette.fs-xs; color: Palette.text3; }
+                        }
+                    }
+
+                    // Items
+                    if grp.open : VerticalLayout {
+                        spacing: 5px; padding-top: 4px;
+
+                        for item in grp.items : Rectangle {
+                            height: 52px;
+                            border-radius: 10px;
+                            border-width: 1px;
+                            border-color: Palette.card-border;
+                            background: Palette.card;
+
+                            // Long-press via TouchArea z=0 + Timer
+                            lp-timer := Timer {
+                                interval: 500ms; running: false;
+                                triggered => { self.running = false; root.ctx-edit(item.global-index); }
+                            }
+                            TouchArea {
+                                z: 0;
+                                pointer-event(pe) => {
+                                    if pe.kind == PointerEventKind.down { lp-timer.running = true; }
+                                    if pe.kind == PointerEventKind.up || pe.kind == PointerEventKind.cancel { lp-timer.running = false; }
+                                }
+                            }
+
+                            // Content z=1 (above lp TouchArea)
+                            HorizontalLayout {
+                                z: 1;
+                                padding-left: 10px; padding-right: 10px;
+                                spacing: 8px;
+
+                                // Status dot — vertical-stretch:0 keeps it from expanding
+                                Rectangle {
+                                    width: 8px; height: 8px; border-radius: 4px;
+                                    vertical-stretch: 0;
+                                    background: item.qty >= item.obj ? Palette.green
+                                              : item.qty > 0         ? Palette.amber
+                                              :                         Palette.danger;
+                                }
+
+                                // Name — left, takes all remaining space
+                                VerticalLayout {
+                                    horizontal-stretch: 1; alignment: center;
+                                    HorizontalLayout {
+                                        spacing: 4px; alignment: start;
+                                        Text {
+                                            text: item.name;
+                                            font-size: Palette.fs;
+                                            color: Palette.text;
+                                            horizontal-alignment: left;
+                                        }
+                                        if item.obj > 0 && item.qty < item.obj : Text {
+                                            text: "manque " + (item.obj - item.qty);
+                                            font-size: Palette.fs-xs;
+                                            font-weight: 600; color: Palette.danger;
+                                            vertical-alignment: center;
+                                        }
+                                    }
+                                }
+
+                                // Controls — right, no horizontal stretch so they stay right
+                                HorizontalLayout {
+                                    spacing: 5px; horizontal-stretch: 0; alignment: center;
+                                    PmBtn { label: "−"; clicked => { root.dec(item.global-index); } }
+                                    Text {
+                                        text: item.qty;
+                                        font-size: Palette.fs-lg; font-weight: 700;
+                                        color: Palette.text; width: 26px;
+                                        horizontal-alignment: center; vertical-alignment: center;
+                                    }
+                                    PmBtn { label: "+"; clicked => { root.inc(item.global-index); } }
+                                    Rectangle {
+                                        width: obj-txt.preferred-width + 10px;
+                                        height: 26px; border-radius: 4px;
+                                        background: obj-ta.pressed ? Palette.card-border : transparent;
+                                        obj-txt := Text {
+                                            text: "/ " + item.obj;
+                                            font-size: Palette.fs-xs; color: Palette.text3;
+                                            horizontal-alignment: center; vertical-alignment: center;
+                                        }
+                                        obj-ta := TouchArea { clicked => { root.obj-clicked(item.global-index); } }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

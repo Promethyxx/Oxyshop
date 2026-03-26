@@ -1,0 +1,162 @@
+import { Palette } from "palette.slint";
+import { SyncBadge, ActionBtn } from "components.slint";
+
+export component ConfigView inherits Rectangle {
+    background: Palette.bg;
+
+    in-out property <string> dav-url;
+    in-out property <string> dav-user;
+    in-out property <string> dav-pass;
+    in property <int>    sync-state;
+    in property <string> sync-label;
+
+    callback save-config;
+    callback test-dav;
+    callback clear-config;
+    callback export-data;
+    callback import-data;
+
+    VerticalLayout {
+        padding: 20px; spacing: 0px;
+
+        // Header
+        HorizontalLayout {
+            alignment: stretch;
+            VerticalLayout {
+                spacing: 2px; horizontal-stretch: 1;
+                Text { text: "Configuration"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+                Text { text: "Connexion WebDAV pour la synchronisation"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+            }
+            SyncBadge { state: root.sync-state; label: root.sync-label; }
+        }
+
+        Rectangle { height: 16px; }
+
+        Flickable {
+            vertical-stretch: 1;
+            viewport-height: cfg-col.preferred-height;
+
+            cfg-col := VerticalLayout {
+                spacing: 10px;
+
+                // WebDAV section
+                Rectangle {
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: Palette.card-border;
+                    background: Palette.card;
+
+                    VerticalLayout {
+                        padding: 14px; spacing: 8px;
+
+                        Text {
+                            text: "☁️  WEBDAV (NEXTCLOUD, KDRIVE, ETC.)";
+                            font-size: Palette.fs-xs + 0.5px; font-weight: 600;
+                            color: Palette.text3; letter-spacing: 1px;
+                        }
+
+                        // URL
+                        VerticalLayout {
+                            spacing: 3px;
+                            Text { text: "URL du dossier WebDAV"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+                            Rectangle {
+                                height: 36px; border-radius: 8px;
+                                border-width: 1px; border-color: Palette.card-border;
+                                background: Palette.card;
+                                clip: true;
+                                HorizontalLayout { padding-left: 8px; padding-right: 8px; alignment: center;
+                                    url-ti := TextInput {
+                                        text <=> root.dav-url;
+                                        font-size: Palette.fs - 0.5px; color: Palette.text;
+                                        horizontal-alignment: left;
+                                    }
+                                    if url-ti.text == "" && !url-ti.has-focus : Text {
+                                        text: "https://xxx.nl.tab.digital/remote.php/dav/files/user/Oxy/";
+                                        font-size: Palette.fs - 0.5px; color: Palette.text3;
+                                    }
+                                }
+                            }
+                        }
+
+                        // User
+                        VerticalLayout {
+                            spacing: 3px;
+                            Text { text: "Nom d'utilisateur"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+                            Rectangle {
+                                height: 36px; border-radius: 8px;
+                                border-width: 1px; border-color: Palette.card-border;
+                                background: Palette.card; clip: true;
+                                HorizontalLayout { padding-left: 8px; padding-right: 8px; alignment: center;
+                                    user-ti := TextInput {
+                                        text <=> root.dav-user;
+                                        font-size: Palette.fs - 0.5px; color: Palette.text;
+                                        horizontal-alignment: left;
+                                    }
+                                    if user-ti.text == "" && !user-ti.has-focus : Text {
+                                        text: "ton@email.com";
+                                        font-size: Palette.fs - 0.5px; color: Palette.text3;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Password
+                        VerticalLayout {
+                            spacing: 3px;
+                            Text { text: "Mot de passe (ou app password)"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+                            Rectangle {
+                                height: 36px; border-radius: 8px;
+                                border-width: 1px; border-color: Palette.card-border;
+                                background: Palette.card; clip: true;
+                                HorizontalLayout { padding-left: 8px; padding-right: 8px; alignment: center;
+                                    pass-ti := TextInput {
+                                        text <=> root.dav-pass;
+                                        input-type: password;
+                                        font-size: Palette.fs - 0.5px; color: Palette.text;
+                                        horizontal-alignment: left;
+                                    }
+                                    if pass-ti.text == "" && !pass-ti.has-focus : Text {
+                                        text: "••••••••";
+                                        font-size: Palette.fs - 0.5px; color: Palette.text3;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Buttons
+                        HorizontalLayout {
+                            spacing: 8px;
+                            ActionBtn { label: "Sauver";  primary: true;  small: true; width: 80px;  clicked => { root.save-config(); } }
+                            ActionBtn { label: "Tester";  primary: false; small: true; width: 80px;  clicked => { root.test-dav(); } }
+                            ActionBtn { label: "Effacer"; primary: false; small: true; width: 80px;  clicked => { root.clear-config(); } }
+                        }
+                    }
+                }
+
+                // Import / Export section
+                Rectangle {
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: Palette.card-border;
+                    background: Palette.card;
+
+                    VerticalLayout {
+                        padding: 14px; spacing: 10px;
+
+                        Text {
+                            text: "💾  IMPORT / EXPORT MANUEL";
+                            font-size: Palette.fs-xs + 0.5px; font-weight: 600;
+                            color: Palette.text3; letter-spacing: 1px;
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+                            ActionBtn { label: "📤 Exporter"; primary: false; small: true; width: 120px; clicked => { root.export-data(); } }
+                            ActionBtn { label: "📂 Parcourir..."; primary: true; small: true; width: 140px; clicked => { root.import-data(); } }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

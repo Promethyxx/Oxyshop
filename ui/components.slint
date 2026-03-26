@@ -1,0 +1,218 @@
+import { Palette } from "palette.slint";
+
+// ── Icon button (circle) ─────────────────────────────────────────────────────
+export component IconBtn inherits Rectangle {
+    in property <string> label;
+    callback clicked;
+
+    width: 34px; height: 34px;
+    border-radius: 17px;
+    border-width: 1px;
+    border-color: Palette.card-border;
+    background: ta.pressed ? Palette.card : transparent;
+
+    Text { text: root.label; font-size: Palette.fs-lg; color: Palette.text2; horizontal-alignment: center; vertical-alignment: center; }
+
+    ta := TouchArea { clicked => { root.clicked(); } }
+
+    animate background { duration: 150ms; }
+}
+
+// ── Primary / secondary action button ───────────────────────────────────────
+export component ActionBtn inherits Rectangle {
+    in property <string> label;
+    in property <bool>   primary: false;
+    in property <bool>   small:   false;
+    callback clicked;
+
+    height: small ? 30px : 40px;
+    border-radius: small ? 8px : 10px;
+    border-width: primary ? 0px : 1px;
+    border-color: Palette.card-border;
+    background: primary ? Palette.gold : Palette.card;
+
+    Text {
+        text: root.label;
+        font-size: small ? Palette.fs-md : Palette.fs;
+        font-weight: 600;
+        color: root.primary ? #1a1a1a : Palette.text;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+
+    ta := TouchArea { clicked => { root.clicked(); } }
+
+    states [
+        pressed when ta.pressed : {
+            opacity: 0.85;
+        }
+    ]
+    animate opacity { duration: 150ms; }
+}
+
+// ── Stat card ────────────────────────────────────────────────────────────────
+export component StatCard inherits Rectangle {
+    in property <string> num;
+    in property <string> lbl;
+    in property <color>  num-color: Palette.text;
+
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: Palette.card-border;
+    background: Palette.card;
+    min-height: 56px;
+
+    VerticalLayout {
+        alignment: center;
+        spacing: 2px;
+        Text {
+            text: root.num;
+            font-size: Palette.fs-lg + 5px; font-weight: 700;
+            color: root.num-color;
+            horizontal-alignment: center;
+        }
+        Text {
+            text: root.lbl;
+            font-size: Palette.fs-xs; font-weight: 500;
+            color: Palette.text3;
+            horizontal-alignment: center;
+            letter-spacing: 0.8px;
+        }
+    }
+}
+
+// ── Search bar ───────────────────────────────────────────────────────────────
+export component SearchBar inherits Rectangle {
+    in-out property <string> text <=> ti.text;
+    in property <string> placeholder: "Chercher...";
+    callback edited(string);
+
+    height: 38px;
+    border-radius: 10px;
+    border-width: 1px;
+    border-color: ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
+    background: Palette.card;
+    clip: true;
+
+    HorizontalLayout {
+        padding-left: 10px; padding-right: 8px;
+        spacing: 6px;
+        alignment: center;
+
+        Text { text: "🔍"; font-size: Palette.fs-sm + 2px; }
+        ti := TextInput {
+            font-size: Palette.fs + 0.5px;
+            color: Palette.text;
+            horizontal-alignment: left;
+            edited => { root.edited(self.text); }
+        }
+        // placeholder overlay
+        if ti.text == "" && !ti.has-focus : Text {
+            text: root.placeholder;
+            font-size: Palette.fs + 0.5px;
+            color: Palette.text3;
+        }
+    }
+
+    animate border-color { duration: 200ms; }
+}
+
+// ── +/- round button ─────────────────────────────────────────────────────────
+export component PmBtn inherits Rectangle {
+    in property <string> label;
+    callback clicked;
+
+    width: 30px; height: 30px;
+    border-radius: 15px;
+    border-width: 1px;
+    border-color: Palette.card-border;
+    background: ta.pressed ? rgba(255,255,255,0.1) : Palette.card;
+
+    Text { text: root.label; font-size: 17px; color: Palette.text; horizontal-alignment: center; vertical-alignment: center; }
+    ta := TouchArea { clicked => { root.clicked(); } }
+    animate background { duration: 150ms; }
+}
+
+// ── Page header ──────────────────────────────────────────────────────────────
+export component PageHeader inherits HorizontalLayout {
+    in property <string> title;
+    in property <string> subtitle;
+    alignment: stretch;
+
+    VerticalLayout {
+        spacing: 2px;
+        Text { text: root.title; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+        Text { text: root.subtitle; font-size: Palette.fs-sm + 2px; color: Palette.text2; }
+    }
+}
+
+// ── Toast notification ───────────────────────────────────────────────────────
+export component Toast inherits Rectangle {
+    in-out property <string> message;
+    in-out property <bool>   show: false;
+
+    // Toast spans full parent (set from outside: x:0, y:0, w=root.width, h=root.height)
+    background: transparent;
+    z: 300;
+
+    pill := Rectangle {
+        height: 38px;
+        width: min(txt.preferred-width + 40px, root.width - 32px);
+        x: (root.width - self.width) / 2;
+        y: root.show ? 16px : -60px;
+        border-radius: 10px;
+        background: Palette.green;
+        drop-shadow-blur: 12px;
+        drop-shadow-color: rgba(0,0,0,0.3);
+
+        txt := Text {
+            text: root.message;
+            font-size: Palette.fs - 0.5px; font-weight: 500;
+            color: #1a1a1a;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+
+        animate y { duration: 300ms; easing: ease-in-out; }
+    }
+}
+
+// ── Modal overlay (bottom sheet) ─────────────────────────────────────────────
+export component ModalOverlay inherits Rectangle {
+    in-out property <bool> active: false;
+    callback backdrop-clicked;
+
+    background: active ? rgba(0,0,0,0.7) : transparent;
+    visible: active;
+    z: 200;
+
+    TouchArea {
+        clicked => { root.backdrop-clicked(); }
+    }
+
+    animate background { duration: 200ms; }
+}
+
+// ── Sync badge ───────────────────────────────────────────────────────────────
+// state: 0=local, 1=ok, 2=error
+export component SyncBadge inherits Rectangle {
+    in property <int> state: 0; // 0 local, 1 ok, 2 err
+    in property <string> label;
+
+    height: 18px;
+    width: txt.preferred-width + 12px;
+    border-radius: 8px;
+    background: state == 1 ? rgba(123,196,127,0.15)
+              : state == 2 ? rgba(224,85,85,0.15)
+              :               rgba(242,211,136,0.15);
+
+    txt := Text {
+        text: root.label;
+        font-size: Palette.fs-xs - 0.5px; font-weight: 600;
+        color: Palette.dark
+            ? (root.state == 1 ? Palette.green : root.state == 2 ? Palette.danger : Palette.amber)
+            : (root.state == 1 ? Palette.green : root.state == 2 ? Palette.danger : Palette.amber);
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}

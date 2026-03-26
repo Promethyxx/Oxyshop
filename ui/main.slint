@@ -1,0 +1,338 @@
+import { Palette } from "palette.slint";
+import { Toast } from "components.slint";
+import { StockView, StockItem, CatGroup } from "stock_view.slint";
+import { CoursesView, CourseItem, CourseCat } from "courses_view.slint";
+import { MenuView, MealSlot, MealOption } from "menu_view.slint";
+import { ConfigView } from "config_view.slint";
+import { ItemModal, ObjModal, CtxMenu } from "modals.slint";
+
+export enum Tab { Menu, Stock, Courses, Config }
+
+export component AppWindow inherits Window {
+    title: "Oxyshop";
+    background: Palette.bg;
+    min-width: 360px;
+    min-height: 600px;
+
+    // ── Active tab ─────────────────────────────────────────────────────────
+    in-out property <Tab> current-tab: Tab.Stock;
+
+    // ── Theme ──────────────────────────────────────────────────────────────
+    in-out property <bool> dark-mode <=> Palette.dark;
+
+    // ── Toast ──────────────────────────────────────────────────────────────
+    in-out property <string> toast-msg;
+    in-out property <bool>   toast-show;
+
+    // ── Stock ──────────────────────────────────────────────────────────────
+    in property <int> stat-total;
+    in property <int> stat-ok;
+    in property <int> stat-low;
+    in property <int> stat-empty;
+    in property <[CatGroup]> categories;
+    in-out property <string> stock-search;
+
+    callback stock-search-changed(string);
+    callback stock-inc(int);
+    callback stock-dec(int);
+    callback stock-toggle-cat(string);
+    callback stock-export;
+    callback stock-import;
+    callback stock-obj-clicked(int);
+    callback stock-ctx-edit(int);
+    callback stock-ctx-delete(int);
+    callback stock-ctx-obj(int);
+
+    // ── Courses ────────────────────────────────────────────────────────────
+    in property <int> course-total;
+    in property <int> course-done;
+    in property <int> course-remaining;
+    in property <[CourseCat]> course-cats;
+    in property <bool> courses-empty;
+    in-out property <string> course-search;
+    callback course-search-changed(string);
+    callback course-toggle(int, bool);
+    callback courses-share;
+    callback courses-reset;
+
+    // ── Menu ───────────────────────────────────────────────────────────────
+    in property <[MealSlot]> meals;
+    in property <int>   sync-state;
+    in property <string> sync-label;
+    callback theme-toggle;
+
+    // ── Config ─────────────────────────────────────────────────────────────
+    in-out property <string> cfg-url;
+    in-out property <string> cfg-user;
+    in-out property <string> cfg-pass;
+    callback cfg-save;
+    callback cfg-test;
+    callback cfg-clear;
+    callback cfg-export;
+    callback cfg-import;
+
+    // ── Item modal ─────────────────────────────────────────────────────────
+    in-out property <bool>   item-modal-active;
+    in property <bool>       item-modal-is-edit;
+    in-out property <string> item-modal-name;
+    in-out property <string> item-modal-cat;
+    in-out property <string> item-modal-qty-str;
+    in-out property <string> item-modal-obj-str;
+    callback item-modal-confirm;
+    callback item-modal-cancel;
+
+    // ── Obj modal ──────────────────────────────────────────────────────────
+    in-out property <bool>   obj-modal-active;
+    in property <string>     obj-modal-item-name;
+    in-out property <string> obj-modal-value-str;
+    callback obj-modal-confirm;
+    callback obj-modal-cancel;
+
+    // ── Ctx menu ───────────────────────────────────────────────────────────
+    in-out property <bool> ctx-active;
+    in property <int>      ctx-target;
+    callback ctx-edit;
+    callback ctx-obj;
+    callback ctx-delete;
+    callback ctx-close;
+
+    // ── Layout ─────────────────────────────────────────────────────────────
+    VerticalLayout {
+        // Pages area
+        page-area := Rectangle {
+            vertical-stretch: 1;
+            clip: true;
+
+            if current-tab == Tab.Menu : MenuView {
+                meals: root.meals;
+                sync-state: root.sync-state;
+                sync-label: root.sync-label;
+                theme-toggle => { root.theme-toggle(); }
+            }
+
+            if current-tab == Tab.Stock : StockView {
+                stat-total: root.stat-total;
+                stat-ok:    root.stat-ok;
+                stat-low:   root.stat-low;
+                stat-empty: root.stat-empty;
+                categories: root.categories;
+                search-text <=> root.stock-search;
+                search-changed(t) => { root.stock-search-changed(t); }
+                add-clicked        => { root.item-modal-active = true; }
+                export-clicked     => { root.stock-export(); }
+                import-clicked     => { root.stock-import(); }
+                theme-toggle       => { root.theme-toggle(); }
+                font-smaller       => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
+                font-larger        => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
+                inc(i)             => { root.stock-inc(i); }
+                dec(i)             => { root.stock-dec(i); }
+                toggle-cat(c)      => { root.stock-toggle-cat(c); }
+                obj-clicked(i)     => { root.stock-obj-clicked(i); }
+                ctx-edit(i)        => { root.stock-ctx-edit(i); }
+                ctx-delete(i)      => { root.stock-ctx-delete(i); }
+                ctx-obj(i)         => { root.stock-ctx-obj(i); }
+            }
+
+            if current-tab == Tab.Courses : CoursesView {
+                stat-total:     root.course-total;
+                stat-done:      root.course-done;
+                stat-remaining: root.course-remaining;
+                categories:     root.course-cats;
+                is-empty:       root.courses-empty;
+                search-text <=> root.course-search;
+                search-changed(t)  => { root.course-search-changed(t); }
+                toggle-course(i,c) => { root.course-toggle(i, c); }
+                share-clicked      => { root.courses-share(); }
+                reset-clicked      => { root.courses-reset(); }
+            }
+
+            if current-tab == Tab.Config : ConfigView {
+                dav-url  <=> root.cfg-url;
+                dav-user <=> root.cfg-user;
+                dav-pass <=> root.cfg-pass;
+                sync-state: root.sync-state;
+                sync-label: root.sync-label;
+                save-config  => { root.cfg-save(); }
+                test-dav     => { root.cfg-test(); }
+                clear-config => { root.cfg-clear(); }
+                export-data  => { root.cfg-export(); }
+                import-data  => { root.cfg-import(); }
+            }
+        }
+
+        // ── Tab bar ────────────────────────────────────────────────────────
+        tab-bar := Rectangle {
+            height: Palette.tab-h;
+            background: Palette.bg2;
+            border-width: 0px;
+
+            // top border
+            Rectangle {
+                y: 0px; height: 1px;
+                background: Palette.card-border;
+            }
+
+            HorizontalLayout {
+                // Menu tab
+                tab-menu := Rectangle {
+                    horizontal-stretch: 1;
+                    background: transparent;
+                    // indicator line
+                    if current-tab == Tab.Menu : Rectangle {
+                        y: 0px; height: 2px;
+                        x: parent.width * 0.2;
+                        width: parent.width * 0.6;
+                        border-radius: 1px;
+                        background: Palette.gold;
+                    }
+                    VerticalLayout {
+                        alignment: center; spacing: 3px;
+                        Text {
+                            text: "≡";
+                            font-size: 20px;
+                            color: current-tab == Tab.Menu ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: "Menu";
+                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
+                            color: current-tab == Tab.Menu ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                    }
+                    TouchArea { clicked => { root.current-tab = Tab.Menu; } }
+                }
+
+                // Stock tab
+                tab-stock := Rectangle {
+                    horizontal-stretch: 1;
+                    background: transparent;
+                    if current-tab == Tab.Stock : Rectangle {
+                        y: 0px; height: 2px;
+                        x: parent.width * 0.2;
+                        width: parent.width * 0.6;
+                        border-radius: 1px;
+                        background: Palette.gold;
+                    }
+                    VerticalLayout {
+                        alignment: center; spacing: 3px;
+                        // cube icon approximation
+                        Text {
+                            text: "⬡";
+                            font-size: 20px;
+                            color: current-tab == Tab.Stock ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: "Stock";
+                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
+                            color: current-tab == Tab.Stock ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                    }
+                    TouchArea { clicked => { root.current-tab = Tab.Stock; } }
+                }
+
+                // Courses tab
+                tab-courses := Rectangle {
+                    horizontal-stretch: 1;
+                    background: transparent;
+                    if current-tab == Tab.Courses : Rectangle {
+                        y: 0px; height: 2px;
+                        x: parent.width * 0.2;
+                        width: parent.width * 0.6;
+                        border-radius: 1px;
+                        background: Palette.gold;
+                    }
+                    VerticalLayout {
+                        alignment: center; spacing: 3px;
+                        Text {
+                            text: "🛒";
+                            font-size: 20px;
+                            color: current-tab == Tab.Courses ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: "Courses";
+                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
+                            color: current-tab == Tab.Courses ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                    }
+                    TouchArea { clicked => { root.current-tab = Tab.Courses; } }
+                }
+
+                // Config tab
+                tab-cfg := Rectangle {
+                    horizontal-stretch: 1;
+                    background: transparent;
+                    if current-tab == Tab.Config : Rectangle {
+                        y: 0px; height: 2px;
+                        x: parent.width * 0.2;
+                        width: parent.width * 0.6;
+                        border-radius: 1px;
+                        background: Palette.gold;
+                    }
+                    VerticalLayout {
+                        alignment: center; spacing: 3px;
+                        Text {
+                            text: "⚙";
+                            font-size: 20px;
+                            color: current-tab == Tab.Config ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: "Config";
+                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
+                            color: current-tab == Tab.Config ? Palette.gold : Palette.text3;
+                            horizontal-alignment: center;
+                        }
+                    }
+                    TouchArea { clicked => { root.current-tab = Tab.Config; } }
+                }
+            }
+        }
+    }
+
+    // ── Overlays ───────────────────────────────────────────────────────────
+    ItemModal {
+        x: 0; y: 0;
+        width: root.width; height: root.height;
+        active <=> root.item-modal-active;
+        is-edit: root.item-modal-is-edit;
+        field-name <=> root.item-modal-name;
+        field-cat  <=> root.item-modal-cat;
+        field-qty-str  <=> root.item-modal-qty-str;
+        field-obj-str  <=> root.item-modal-obj-str;
+        confirm => { root.item-modal-confirm(); }
+        cancel  => { root.item-modal-cancel(); }
+    }
+
+    ObjModal {
+        x: 0; y: 0;
+        width: root.width; height: root.height;
+        active    <=> root.obj-modal-active;
+        item-name:    root.obj-modal-item-name;
+        value-str <=> root.obj-modal-value-str;
+        confirm => { root.obj-modal-confirm(); }
+        cancel  => { root.obj-modal-cancel(); }
+    }
+
+    CtxMenu {
+        x: 0; y: 0;
+        width: root.width; height: root.height;
+        active       <=> root.ctx-active;
+        target-index:    root.ctx-target;
+        edit-item => { root.ctx-edit(); }
+        obj-item  => { root.ctx-obj(); }
+        del-item  => { root.ctx-delete(); }
+        close     => { root.ctx-close(); }
+    }
+
+    Toast {
+        x: 0; y: 0;
+        width: root.width; height: root.height;
+        message <=> root.toast-msg;
+        show <=> root.toast-show;
+    }
+}

@@ -1,0 +1,154 @@
+import { Palette } from "palette.slint";
+import { StatCard, SearchBar, IconBtn } from "components.slint";
+
+export struct CourseItem {
+    name: string,
+    cat: string,
+    need: int,
+    global-index: int,
+    checked: bool,
+}
+
+export struct CourseCat {
+    name: string,
+    icon: string,
+    color: color,
+    items: [CourseItem],
+}
+
+export component CoursesView inherits Rectangle {
+    background: Palette.bg;
+
+    in property <int> stat-total;
+    in property <int> stat-done;
+    in property <int> stat-remaining;
+    in property <[CourseCat]> categories;
+    in property <bool> is-empty;
+    in-out property <string> search-text;
+
+    callback search-changed(string);
+    callback toggle-course(int, bool); // global-index, new-checked-state
+    callback share-clicked;
+    callback reset-clicked;
+
+    VerticalLayout {
+        padding: 20px; spacing: 0px;
+
+        // Header
+        HorizontalLayout {
+            alignment: stretch; spacing: 8px;
+            VerticalLayout {
+                spacing: 2px; horizontal-stretch: 1;
+                Text { text: "Courses"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+                Text { text: "Cocher = acheté (stock +quantité auto)"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+            }
+            HorizontalLayout {
+                spacing: 6px; alignment: end;
+                IconBtn { label: "📤"; clicked => { root.share-clicked(); } }
+                IconBtn { label: "🔄"; clicked => { root.reset-clicked(); } }
+            }
+        }
+
+        Rectangle { height: 16px; }
+
+        // Stats
+        HorizontalLayout {
+            spacing: 8px; height: 64px;
+            StatCard { num: root.stat-total;     lbl: "À ACHETER";  horizontal-stretch: 1; }
+            StatCard { num: root.stat-done;       lbl: "FAIT";       num-color: Palette.green; horizontal-stretch: 1; }
+            StatCard { num: root.stat-remaining;  lbl: "RESTANT";    num-color: Palette.gold;  horizontal-stretch: 1; }
+        }
+
+        Rectangle { height: 12px; }
+
+        // Search
+        SearchBar {
+            height: 38px;
+            text <=> root.search-text;
+            placeholder: "Chercher...";
+            edited(t) => { root.search-changed(t); }
+        }
+
+        Rectangle { height: 12px; }
+
+        // Content
+        if root.is-empty : Rectangle {
+            vertical-stretch: 1;
+            VerticalLayout {
+                alignment: center; spacing: 8px;
+                Text { text: "✅"; font-size: 32px; horizontal-alignment: center; }
+                Text { text: "Stock complet !"; font-size: 14px; color: Palette.text3; horizontal-alignment: center; }
+            }
+        }
+
+        if !root.is-empty : Flickable {
+            vertical-stretch: 1;
+            viewport-height: course-col.preferred-height;
+
+            course-col := VerticalLayout {
+                spacing: 12px;
+
+                for grp in root.categories : VerticalLayout {
+                    spacing: 4px;
+
+                    // Cat label
+                    Text {
+                        text: grp.icon + " " + grp.name;
+                        font-size: Palette.fs-md - 0.5px; font-weight: 600;
+                        color: grp.color;
+                        letter-spacing: 0.8px;
+                    }
+
+                    for item in grp.items : course-item-rect := Rectangle {
+                        height: 50px;
+                        border-radius: 10px;
+                        border-width: 1px;
+                        border-color: Palette.card-border;
+                        background: Palette.card;
+                        opacity: item.checked ? 0.35 : 1.0;
+
+                        HorizontalLayout {
+                            padding-left: 12px; padding-right: 12px;
+                            spacing: 12px; alignment: center;
+
+                            // Checkbox
+                            Rectangle {
+                                width: 22px; height: 22px;
+                                border-radius: 6px;
+                                border-width: 2px;
+                                border-color: item.checked ? Palette.green : Palette.text3;
+                                background: item.checked ? Palette.green : transparent;
+                                Text {
+                                    text: item.checked ? "✓" : "";
+                                    font-size: Palette.fs-md - 0.5px; color: #1a1a1a;
+                                    horizontal-alignment: center;
+                                    vertical-alignment: center;
+                                }
+                                animate background, border-color { duration: 200ms; }
+                            }
+
+                            // Name + qty
+                            VerticalLayout {
+                                horizontal-stretch: 1; spacing: 1px; alignment: center;
+                                Text {
+                                    text: item.name;
+                                    font-size: Palette.fs + 0.5px; font-weight: 500;
+                                    color: Palette.text;
+                                    // strikethrough not in Slint — handled by opacity above
+                                }
+                                Text {
+                                    text: "× " + item.need;
+                                    font-size: Palette.fs-md - 0.5px; color: Palette.text2;
+                                }
+                            }
+                        }
+
+                        TouchArea {
+                            clicked => { root.toggle-course(item.global-index, !item.checked); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

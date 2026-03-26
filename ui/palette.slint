@@ -1,0 +1,36 @@
+export global Palette {
+    in-out property <bool> dark: true;
+
+    // Backgrounds
+    out property <color> bg:           dark ? #0D0D0D : #F5F4F0;
+    out property <color> bg2:          dark ? #161614 : #ECEAE4;
+    out property <color> card:         dark ? rgba(255,255,255,0.035) : rgba(0,0,0,0.04);
+    out property <color> card-border:  dark ? rgba(255,255,255,0.06)  : rgba(0,0,0,0.08);
+
+    // Text
+    out property <color> text:         dark ? #E8E4DE : #2A2520;
+    out property <color> text2:        dark ? rgba(232,228,222,0.6)  : rgba(42,37,32,0.55);
+    out property <color> text3:        dark ? rgba(232,228,222,0.3)  : rgba(42,37,32,0.3);
+
+    // Accent
+    out property <color> gold:         dark ? #E8A87C : #C97B4B;
+    out property <color> teal:         dark ? #85CDCA : #4A8E8A;
+    out property <color> red:          dark ? #D96459 : #B8453A;
+    out property <color> amber:        dark ? #F2D388 : #C9A84C;
+    out property <color> brown:        dark ? #C7B198 : #8E7E6A;
+    out property <color> green:        dark ? #7BC47F : #4A9E4E;
+    out property <color> danger:       dark ? #E05555 : #C0453A;
+    out property <color> purple:              #B794D6;
+
+    // Tab bar
+    out property <length> tab-h: 64px;
+
+    // Font scale (adjustable +/- 2px steps)
+    in-out property <length> font-scale: 0px;
+    out property <length> fs:    13px + font-scale;
+    out property <length> fs-sm: 10px + font-scale;
+    out property <length> fs-lg: 16px + font-scale;
+    out property <length> fs-xs:  9px + font-scale;
+    out property <length> fs-md: 11.5px + font-scale;
+    out property <length> fs-title: 26px + font-scale;
+}
