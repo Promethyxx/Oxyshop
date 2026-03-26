@@ -1,0 +1,84 @@
+export struct StockItem {
+    name: string,
+    cat: string,
+    qty: int,
+    obj: int,
+}
+
+export component App inherits Window {
+    width: 420px;
+    height: 740px;
+
+    in-out property <[StockItem]> stock;
+
+    in-out property <int> tab: 0;
+
+    callback inc(int);
+    callback dec(int);
+    callback toggle_course(int);
+
+    VerticalLayout {
+
+        // HEADER
+        Text {
+            text: tab == 0 ? "Stock" : tab == 1 ? "Courses" : "Config";
+            font-size: 22px;
+            horizontal-alignment: center;
+        }
+
+        // SEARCH
+        TextInput {
+            placeholder-text: "Recherche...";
+        }
+
+        // STOCK PAGE
+        if (tab == 0) : ListView {
+            for stock[i] in root.stock : Rectangle {
+                height: 50px;
+
+                HorizontalLayout {
+                    Text { text: stock[i].name; width: 1*; }
+
+                    Button { text: "-"; clicked => root.dec(i); }
+
+                    Text { text: stock[i].qty + "/" + stock[i].obj; }
+
+                    Button { text: "+"; clicked => root.inc(i); }
+                }
+            }
+        }
+
+        // COURSES PAGE
+        if (tab == 1) : ListView {
+            for stock[i] in root.stock : Rectangle {
+                height: 50px;
+
+                if (stock[i].qty < stock[i].obj) : HorizontalLayout {
+                    Text { text: stock[i].name; width: 1*; }
+                    Text { text: "x" + (stock[i].obj - stock[i].qty); }
+                    Button { text: "✔"; clicked => root.toggle_course(i); }
+                }
+            }
+        }
+
+        // CONFIG PAGE
+        if (tab == 2) : VerticalLayout {
+            Text { text: "WebDAV"; }
+
+            TextInput { placeholder-text: "URL"; }
+            TextInput { placeholder-text: "User"; }
+            TextInput { placeholder-text: "Password"; }
+
+            Button { text: "Save"; }
+        }
+
+        // TABS
+        HorizontalLayout {
+            height: 50px;
+
+            Button { text: "Stock"; clicked => root.tab = 0; }
+            Button { text: "Courses"; clicked => root.tab = 1; }
+            Button { text: "Config"; clicked => root.tab = 2; }
+        }
+    }
+}
