@@ -1,5 +1,5 @@
 import { Palette } from "palette.slint";
-import { Toast } from "components.slint";
+import { Toast, SyncBadge } from "components.slint";
 import { StockView, StockItem, CatGroup } from "stock_view.slint";
 import { CoursesView, CourseItem, CourseCat } from "courses_view.slint";
 import { MenuView, MealSlot, MealOption } from "menu_view.slint";
@@ -10,6 +10,7 @@ export enum Tab { Menu, Stock, Courses, Config }
 
 export component AppWindow inherits Window {
     title: "Oxyshop";
+    icon: @image-url("../assets/Oxyshop_icon.PNG");
     background: Palette.bg;
     min-width: 360px;
     min-height: 600px;
@@ -52,12 +53,11 @@ export component AppWindow inherits Window {
     in-out property <string> course-search;
     callback course-search-changed(string);
     callback course-toggle(int, bool);
-    callback courses-share;
     callback courses-reset;
 
     // ── Menu ───────────────────────────────────────────────────────────────
     in property <[MealSlot]> meals;
-    in property <int>   sync-state;
+    in property <int>    sync-state;
     in property <string> sync-label;
     callback theme-toggle;
 
@@ -98,6 +98,17 @@ export component AppWindow inherits Window {
 
     // ── Layout ─────────────────────────────────────────────────────────────
     VerticalLayout {
+        // Sync badge strip — visible sur toutes les pages
+        Rectangle {
+            height: 22px;
+            background: Palette.bg;
+            HorizontalLayout {
+                padding-left: 16px; padding-right: 16px;
+                SyncBadge { state: root.sync-state; label: root.sync-label; }
+                Rectangle { horizontal-stretch: 1; }
+            }
+        }
+
         // Pages area
         page-area := Rectangle {
             vertical-stretch: 1;
@@ -105,9 +116,9 @@ export component AppWindow inherits Window {
 
             if current-tab == Tab.Menu : MenuView {
                 meals: root.meals;
-                sync-state: root.sync-state;
-                sync-label: root.sync-label;
                 theme-toggle => { root.theme-toggle(); }
+                font-smaller  => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
+                font-larger   => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
             }
 
             if current-tab == Tab.Stock : StockView {
@@ -142,21 +153,24 @@ export component AppWindow inherits Window {
                 search-text <=> root.course-search;
                 search-changed(t)  => { root.course-search-changed(t); }
                 toggle-course(i,c) => { root.course-toggle(i, c); }
-                share-clicked      => { root.courses-share(); }
                 reset-clicked      => { root.courses-reset(); }
+                theme-toggle       => { root.theme-toggle(); }
+                font-smaller       => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
+                font-larger        => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
             }
 
             if current-tab == Tab.Config : ConfigView {
                 dav-url  <=> root.cfg-url;
                 dav-user <=> root.cfg-user;
                 dav-pass <=> root.cfg-pass;
-                sync-state: root.sync-state;
-                sync-label: root.sync-label;
                 save-config  => { root.cfg-save(); }
                 test-dav     => { root.cfg-test(); }
                 clear-config => { root.cfg-clear(); }
                 export-data  => { root.cfg-export(); }
                 import-data  => { root.cfg-import(); }
+                theme-toggle => { root.theme-toggle(); }
+                font-smaller => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
+                font-larger  => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
             }
         }
 

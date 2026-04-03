@@ -1,5 +1,5 @@
 import { Palette } from "palette.slint";
-import { SyncBadge, ActionBtn } from "components.slint";
+import { ActionBtn, IconBtn } from "components.slint";
 
 export component ConfigView inherits Rectangle {
     background: Palette.bg;
@@ -7,27 +7,33 @@ export component ConfigView inherits Rectangle {
     in-out property <string> dav-url;
     in-out property <string> dav-user;
     in-out property <string> dav-pass;
-    in property <int>    sync-state;
-    in property <string> sync-label;
 
     callback save-config;
     callback test-dav;
     callback clear-config;
     callback export-data;
     callback import-data;
+    callback theme-toggle;
+    callback font-smaller;
+    callback font-larger;
 
     VerticalLayout {
         padding: 20px; spacing: 0px;
 
-        // Header
+        // Header — même pattern que StockView
         HorizontalLayout {
-            alignment: stretch;
+            alignment: stretch; spacing: 8px;
             VerticalLayout {
                 spacing: 2px; horizontal-stretch: 1;
                 Text { text: "Configuration"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
                 Text { text: "Connexion WebDAV pour la synchronisation"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
             }
-            SyncBadge { state: root.sync-state; label: root.sync-label; }
+            HorizontalLayout {
+                spacing: 6px; alignment: end;
+                IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { root.theme-toggle(); } }
+                IconBtn { label: "A−"; clicked => { root.font-smaller(); } }
+                IconBtn { label: "A+"; clicked => { root.font-larger(); } }
+            }
         }
 
         Rectangle { height: 16px; }
@@ -61,19 +67,21 @@ export component ConfigView inherits Rectangle {
                             Text { text: "URL du dossier WebDAV"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
                             Rectangle {
                                 height: 36px; border-radius: 8px;
-                                border-width: 1px; border-color: Palette.card-border;
-                                background: Palette.card;
-                                clip: true;
-                                HorizontalLayout { padding-left: 8px; padding-right: 8px; alignment: center;
-                                    url-ti := TextInput {
-                                        text <=> root.dav-url;
-                                        font-size: Palette.fs - 0.5px; color: Palette.text;
-                                        horizontal-alignment: left;
-                                    }
-                                    if url-ti.text == "" && !url-ti.has-focus : Text {
-                                        text: "https://xxx.nl.tab.digital/remote.php/dav/files/user/Oxy/";
-                                        font-size: Palette.fs - 0.5px; color: Palette.text3;
-                                    }
+                                border-width: 1px;
+                                border-color: url-ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
+                                background: Palette.card; clip: true;
+                                url-ti := TextInput {
+                                    x: 8px; y: 0px;
+                                    width: parent.width - 16px;
+                                    height: parent.height;
+                                    text <=> root.dav-url;
+                                    font-size: Palette.fs - 0.5px; color: Palette.text;
+                                    horizontal-alignment: left; vertical-alignment: center;
+                                }
+                                if url-ti.text == "" && !url-ti.has-focus : Text {
+                                    x: 8px; y: (parent.height - self.preferred-height) / 2;
+                                    text: "https://cloud.example.com/remote.php/dav/files/user/Oxy/";
+                                    font-size: Palette.fs - 0.5px; color: Palette.text3;
                                 }
                             }
                         }
@@ -84,18 +92,21 @@ export component ConfigView inherits Rectangle {
                             Text { text: "Nom d'utilisateur"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
                             Rectangle {
                                 height: 36px; border-radius: 8px;
-                                border-width: 1px; border-color: Palette.card-border;
+                                border-width: 1px;
+                                border-color: user-ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
                                 background: Palette.card; clip: true;
-                                HorizontalLayout { padding-left: 8px; padding-right: 8px; alignment: center;
-                                    user-ti := TextInput {
-                                        text <=> root.dav-user;
-                                        font-size: Palette.fs - 0.5px; color: Palette.text;
-                                        horizontal-alignment: left;
-                                    }
-                                    if user-ti.text == "" && !user-ti.has-focus : Text {
-                                        text: "ton@email.com";
-                                        font-size: Palette.fs - 0.5px; color: Palette.text3;
-                                    }
+                                user-ti := TextInput {
+                                    x: 8px; y: 0px;
+                                    width: parent.width - 16px;
+                                    height: parent.height;
+                                    text <=> root.dav-user;
+                                    font-size: Palette.fs - 0.5px; color: Palette.text;
+                                    horizontal-alignment: left; vertical-alignment: center;
+                                }
+                                if user-ti.text == "" && !user-ti.has-focus : Text {
+                                    x: 8px; y: (parent.height - self.preferred-height) / 2;
+                                    text: "ton@email.com";
+                                    font-size: Palette.fs - 0.5px; color: Palette.text3;
                                 }
                             }
                         }
@@ -106,19 +117,22 @@ export component ConfigView inherits Rectangle {
                             Text { text: "Mot de passe (ou app password)"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
                             Rectangle {
                                 height: 36px; border-radius: 8px;
-                                border-width: 1px; border-color: Palette.card-border;
+                                border-width: 1px;
+                                border-color: pass-ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
                                 background: Palette.card; clip: true;
-                                HorizontalLayout { padding-left: 8px; padding-right: 8px; alignment: center;
-                                    pass-ti := TextInput {
-                                        text <=> root.dav-pass;
-                                        input-type: password;
-                                        font-size: Palette.fs - 0.5px; color: Palette.text;
-                                        horizontal-alignment: left;
-                                    }
-                                    if pass-ti.text == "" && !pass-ti.has-focus : Text {
-                                        text: "••••••••";
-                                        font-size: Palette.fs - 0.5px; color: Palette.text3;
-                                    }
+                                pass-ti := TextInput {
+                                    x: 8px; y: 0px;
+                                    width: parent.width - 16px;
+                                    height: parent.height;
+                                    text <=> root.dav-pass;
+                                    input-type: password;
+                                    font-size: Palette.fs - 0.5px; color: Palette.text;
+                                    horizontal-alignment: left; vertical-alignment: center;
+                                }
+                                if pass-ti.text == "" && !pass-ti.has-focus : Text {
+                                    x: 8px; y: (parent.height - self.preferred-height) / 2;
+                                    text: "••••••••";
+                                    font-size: Palette.fs - 0.5px; color: Palette.text3;
                                 }
                             }
                         }
@@ -151,7 +165,7 @@ export component ConfigView inherits Rectangle {
 
                         HorizontalLayout {
                             spacing: 8px;
-                            ActionBtn { label: "📤 Exporter"; primary: false; small: true; width: 120px; clicked => { root.export-data(); } }
+                            ActionBtn { label: "📤 Exporter";   primary: false; small: true; width: 120px; clicked => { root.export-data(); } }
                             ActionBtn { label: "📂 Parcourir..."; primary: true; small: true; width: 140px; clicked => { root.import-data(); } }
                         }
                     }

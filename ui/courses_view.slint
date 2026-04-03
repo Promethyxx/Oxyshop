@@ -1,5 +1,5 @@
 import { Palette } from "palette.slint";
-import { StatCard, SearchBar, IconBtn } from "components.slint";
+import { StatCard, SearchBar, ActionBtn, IconBtn } from "components.slint";
 
 export struct CourseItem {
     name: string,
@@ -28,8 +28,10 @@ export component CoursesView inherits Rectangle {
 
     callback search-changed(string);
     callback toggle-course(int, bool); // global-index, new-checked-state
-    callback share-clicked;
     callback reset-clicked;
+    callback theme-toggle;
+    callback font-smaller;
+    callback font-larger;
 
     VerticalLayout {
         padding: 20px; spacing: 0px;
@@ -44,8 +46,9 @@ export component CoursesView inherits Rectangle {
             }
             HorizontalLayout {
                 spacing: 6px; alignment: end;
-                IconBtn { label: "📤"; clicked => { root.share-clicked(); } }
-                IconBtn { label: "🔄"; clicked => { root.reset-clicked(); } }
+                IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { root.theme-toggle(); } }
+                IconBtn { label: "A−"; clicked => { root.font-smaller(); } }
+                IconBtn { label: "A+"; clicked => { root.font-larger(); } }
             }
         }
 

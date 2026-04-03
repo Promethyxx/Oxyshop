@@ -592,34 +592,6 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-    ui.on_courses_share({
-        let app = app_state.clone();
-        let toast = toast.clone();
-        move || {
-            let st = app.lock().unwrap();
-            let needed: Vec<_> = st.state.stock.iter()
-                .filter(|i| i.obj > 0 && i.qty < i.obj)
-                .map(|i| (i.cat.as_str(), i.name.as_str(), i.obj - i.qty))
-                .collect();
-            if needed.is_empty() { toast("Rien à acheter !"); return; }
-            // Build text
-            let mut text = "🛒 LISTE DE COURSES\n\n".to_string();
-            for cat in CAT_ORDER {
-                let items: Vec<_> = needed.iter().filter(|(c, _, _)| c == cat).collect();
-                if items.is_empty() { continue; }
-                text += &format!("{} {}\n", cat_icon(cat), cat.to_uppercase());
-                for (_, name, need) in &items {
-                    text += &format!("  □ {} × {}\n", name, need);
-                }
-                text += "\n";
-            }
-            // Copy to clipboard via arboard or just toast
-            toast(&format!("📋 {} articles", needed.len()));
-            // clipboard::set_contents(text) — requires arboard dep, skip for now
-            let _ = text;
-        }
-    });
-
     ui.on_courses_reset({
         let app = app_state.clone();
         let rc = refresh_courses.clone();
@@ -670,8 +642,14 @@ fn main() -> Result<(), slint::PlatformError> {
         let app = app_state.clone();
         let toast = toast.clone();
         let rs = refresh_sync.clone();
+        let ui_weak = ui.as_weak();
         move || {
-            let cfg = app.lock().unwrap().config.clone();
+            let ui = ui_weak.unwrap();
+            let cfg = DavConfig {
+                url:  ui.get_cfg_url().to_string(),
+                user: ui.get_cfg_user().to_string(),
+                pass: ui.get_cfg_pass().to_string(),
+            };
             if !cfg.is_complete() { toast("⚠️ Remplis les 3 champs"); return; }
             match dav_test(&cfg) {
                 Ok(()) => {

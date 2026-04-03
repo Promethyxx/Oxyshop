@@ -1,5 +1,5 @@
 import { Palette } from "palette.slint";
-import { SyncBadge, IconBtn } from "components.slint";
+import { IconBtn } from "components.slint";
 
 export struct MealOption {
     emoji: string,
@@ -20,9 +20,9 @@ export component MenuView inherits Rectangle {
     background: Palette.bg;
 
     in property <[MealSlot]> meals;
-    in property <int>  sync-state;
-    in property <string> sync-label;
     callback theme-toggle;
+    callback font-smaller;
+    callback font-larger;
 
     VerticalLayout {
         padding: 20px; spacing: 0px;
@@ -37,11 +37,9 @@ export component MenuView inherits Rectangle {
             }
             HorizontalLayout {
                 spacing: 6px; alignment: end;
-                SyncBadge { state: root.sync-state; label: root.sync-label; }
-                IconBtn {
-                    label: Palette.dark ? "🌙" : "☀️";
-                    clicked => { root.theme-toggle(); }
-                }
+                IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { root.theme-toggle(); } }
+                IconBtn { label: "A−"; clicked => { root.font-smaller(); } }
+                IconBtn { label: "A+"; clicked => { root.font-larger(); } }
             }
         }
 
