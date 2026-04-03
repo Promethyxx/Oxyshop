@@ -22,19 +22,10 @@ export component ConfigView inherits Rectangle {
         padding: 20px; spacing: 0px;
 
         // Header
-        HorizontalLayout {
-            alignment: stretch; spacing: 8px;
-            VerticalLayout {
-                spacing: 2px; horizontal-stretch: 1;
-                Text { text: "Configuration"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
-                Text { text: lang-en ? "WebDAV connection for sync" : "Connexion WebDAV pour la synchronisation"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
-            }
-            HorizontalLayout {
-                spacing: 6px; alignment: end;
-                IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { root.theme-toggle(); } }
-                IconBtn { label: "A−"; clicked => { root.font-smaller(); } }
-                IconBtn { label: "A+"; clicked => { root.font-larger(); } }
-            }
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: "Configuration"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+            Text { text: lang-en ? "WebDAV connection for sync" : "Connexion WebDAV pour la synchronisation"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
         }
 
         Rectangle { height: 16px; }

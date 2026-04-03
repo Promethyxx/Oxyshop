@@ -48,19 +48,10 @@ export component StockView inherits Rectangle {
         padding: 20px; spacing: 0px;
 
         // Header
-        HorizontalLayout {
-            alignment: stretch; spacing: 8px;
-            VerticalLayout {
-                spacing: 2px; horizontal-stretch: 1;
-                Text { text: lang-en ? "My Stock" : "Mon Stock"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
-                Text { text: lang-en ? "Long press = edit · Tap target = change" : "Tap long = éditer · Tap objectif = modifier"; font-size: Palette.fs-xs; color: Palette.text2; }
-            }
-            HorizontalLayout {
-                spacing: 6px; alignment: end;
-                IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { root.theme-toggle(); } }
-                IconBtn { label: "A−"; clicked => { root.font-smaller(); } }
-                IconBtn { label: "A+"; clicked => { root.font-larger(); } }
-            }
+        VerticalLayout {
+            spacing: 2px;
+            Text { text: lang-en ? "My Stock" : "Mon Stock"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+            Text { text: lang-en ? "Long press = edit · Tap target = change" : "Tap long = éditer · Tap objectif = modifier"; font-size: Palette.fs-xs; color: Palette.text2; }
         }
 
         Rectangle { height: 16px; }
