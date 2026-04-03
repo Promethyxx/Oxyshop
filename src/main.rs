@@ -1,3 +1,5 @@
+#![windows_subsystem = "windows"]
+
 mod data;
 mod storage;
 
@@ -199,17 +201,16 @@ fn main() -> Result<(), slint::PlatformError> {
     let config = load_config();
 
     // Load data: try WebDAV first, fallback local, fallback defaults
-    let mut state = if config.is_complete() {
-        dav_load(&config).ok()
+    let (mut state, dav_ok) = if config.is_complete() {
+        match dav_load(&config) {
+            Ok(s) => (s, true),
+            Err(_) => (load_local().unwrap_or_else(AppState::with_defaults), false),
+        }
     } else {
-        None
-    }
-    .or_else(load_local)
-    .unwrap_or_else(AppState::with_defaults);
+        (load_local().unwrap_or_else(AppState::with_defaults), false)
+    };
     // Fill meals from defaults if not yet in saved state
     if state.meals.is_empty() { state.meals = data::default_meals(); }
-
-    let dav_ok = config.is_complete() && state.last_modified.is_some();
 
     let app_state = Arc::new(Mutex::new(App {
         state,

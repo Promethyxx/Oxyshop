@@ -3641,7 +3641,7 @@ dependencies = [
 
 [[package]]
 name = "oxyshop"
-version = "0.2.0"
+version = "0.4.0"
 dependencies = [
  "base64",
  "dirs",
