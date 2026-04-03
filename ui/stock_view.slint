@@ -26,6 +26,7 @@ export component StockView inherits Rectangle {
     in property <int> stat-low;
     in property <int> stat-empty;
     in property <[CatGroup]> categories;
+    in property <bool> lang-en;
     in-out property <string> search-text;
 
     callback search-changed(string);
@@ -51,8 +52,8 @@ export component StockView inherits Rectangle {
             alignment: stretch; spacing: 8px;
             VerticalLayout {
                 spacing: 2px; horizontal-stretch: 1;
-                Text { text: "Mon Stock"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
-                Text { text: "Tap long = éditer · Tap objectif = modifier"; font-size: Palette.fs-xs; color: Palette.text2; }
+                Text { text: lang-en ? "My Stock" : "Mon Stock"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+                Text { text: lang-en ? "Long press = edit · Tap target = change" : "Tap long = éditer · Tap objectif = modifier"; font-size: Palette.fs-xs; color: Palette.text2; }
             }
             HorizontalLayout {
                 spacing: 6px; alignment: end;
@@ -67,10 +68,10 @@ export component StockView inherits Rectangle {
         // Stats
         HorizontalLayout {
             spacing: 8px; height: 64px;
-            StatCard { num: root.stat-total; lbl: "ARTICLES"; horizontal-stretch: 1; }
-            StatCard { num: root.stat-ok;    lbl: "OK";       num-color: Palette.green;  horizontal-stretch: 1; }
-            StatCard { num: root.stat-low;   lbl: "BAS";      num-color: Palette.amber;  horizontal-stretch: 1; }
-            StatCard { num: root.stat-empty; lbl: "MANQUANTS"; num-color: Palette.danger; horizontal-stretch: 1; }
+            StatCard { num: root.stat-total; lbl: lang-en ? "ITEMS" : "ARTICLES";   horizontal-stretch: 1; }
+            StatCard { num: root.stat-ok;    lbl: "OK";                              num-color: Palette.green;  horizontal-stretch: 1; }
+            StatCard { num: root.stat-low;   lbl: lang-en ? "LOW" : "BAS";          num-color: Palette.amber;  horizontal-stretch: 1; }
+            StatCard { num: root.stat-empty; lbl: lang-en ? "MISSING" : "MANQUANTS"; num-color: Palette.danger; horizontal-stretch: 1; }
         }
 
         Rectangle { height: 12px; }
@@ -81,11 +82,11 @@ export component StockView inherits Rectangle {
             SearchBar {
                 horizontal-stretch: 1;
                 text <=> root.search-text;
-                placeholder: "Chercher un article...";
+                placeholder: lang-en ? "Search item..." : "Chercher un article...";
                 edited(t) => { root.search-changed(t); }
             }
             ActionBtn {
-                label: "+ Ajouter"; primary: true; small: true;
+                label: lang-en ? "+ Add" : "+ Ajouter"; primary: true; small: true;
                 width: 90px;
                 clicked => { root.add-clicked(); }
             }
@@ -154,7 +155,7 @@ export component StockView inherits Rectangle {
                                 padding-left: 10px; padding-right: 10px;
                                 spacing: 8px;
 
-                                // Status dot — vertical-stretch:0 keeps it from expanding
+                                // Status dot
                                 Rectangle {
                                     width: 8px; height: 8px; border-radius: 4px;
                                     vertical-stretch: 0;
@@ -163,7 +164,7 @@ export component StockView inherits Rectangle {
                                               :                         Palette.danger;
                                 }
 
-                                // Name — left, takes all remaining space
+                                // Name
                                 VerticalLayout {
                                     horizontal-stretch: 1; alignment: center;
                                     HorizontalLayout {
@@ -175,7 +176,7 @@ export component StockView inherits Rectangle {
                                             horizontal-alignment: left;
                                         }
                                         if item.obj > 0 && item.qty < item.obj : Text {
-                                            text: "manque " + (item.obj - item.qty);
+                                            text: (lang-en ? "missing " : "manque ") + (item.obj - item.qty);
                                             font-size: Palette.fs-xs;
                                             font-weight: 600; color: Palette.danger;
                                             vertical-alignment: center;
@@ -183,7 +184,7 @@ export component StockView inherits Rectangle {
                                     }
                                 }
 
-                                // Controls — right, no horizontal stretch so they stay right
+                                // Controls
                                 HorizontalLayout {
                                     spacing: 5px; horizontal-stretch: 0; alignment: center;
                                     PmBtn { label: "−"; clicked => { root.dec(item.global-index); } }

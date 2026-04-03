@@ -9,10 +9,54 @@ pub struct StockItem {
     pub obj: i32,
 }
 
+// ── Meal data ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MealEntry {
+    pub time: String,
+    pub label: String,
+    pub accent: String, // hex color e.g. "#E8A87C"
+    pub content: String, // multi-line text, options separated by \n
+}
+
+pub const ACCENT_COLORS: &[&str] = &[
+    "#E8A87C", "#85CDCA", "#D96459", "#C7B198", "#F2D388", "#B794D6",
+];
+
+pub fn accent_idx(hex: &str) -> i32 {
+    ACCENT_COLORS.iter().position(|&c| c.eq_ignore_ascii_case(hex)).unwrap_or(0) as i32
+}
+
+pub fn default_meals() -> Vec<MealEntry> {
+    let dinner = "🥩 Viande Rouge, 200g Pâtes, 150g Épinards, 1 cas H d'olive\n\
+                  🐟 Thon à l'Huile, 200g Riz, 100g Poivrons. 1 cas H d'olive\n\
+                  🐟 Saumon, 200g Pâtes complètes, 150g Carottes, 1 cas H de colza\n\
+                  🫀 Foie de Bœuf, 200g Patates, 150g Épinards. 2 cas H d'olive\n\
+                  🍳 Omelette Lard (3 œufs), 250g Haricots, Salade verte + Radis, 1 cas H de noix";
+    vec![
+        MealEntry { time: "08h".into(), label: "Petit-déjeuner".into(), accent: "#E8A87C".into(),
+            content: "Bircher (30g avoine, 5cl lait, 1 yaourt, 1 noix Brésil, 1 cac arachide, 25g amandes)".into() },
+        MealEntry { time: "10h".into(), label: "Collation".into(), accent: "#85CDCA".into(),
+            content: "1 Kiwi, 2dl Lait, 2dl Jus de fruit".into() },
+        MealEntry { time: "12h".into(), label: "Dîner".into(), accent: "#D96459".into(),
+            content: dinner.into() },
+        MealEntry { time: "16h".into(), label: "Goûter".into(), accent: "#C7B198".into(),
+            content: "(Optionnel si faim) : Un peu de fruit ou noix, ou juste de l'eau".into() },
+        MealEntry { time: "18h".into(), label: "Souper".into(), accent: "#D96459".into(),
+            content: dinner.into() },
+        MealEntry { time: "20h".into(), label: "Soir".into(), accent: "#F2D388".into(),
+            content: "50g Fromage".into() },
+    ]
+}
+
+// ── App state ────────────────────────────────────────────────────────────────
+
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AppState {
     pub stock: Vec<StockItem>,
     pub checked: HashMap<String, bool>, // "cat:name" -> bool
+    #[serde(default)]
+    pub meals: Vec<MealEntry>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_modified: Option<String>,
 }
@@ -22,6 +66,7 @@ impl AppState {
         Self {
             stock: default_stock(),
             checked: HashMap::new(),
+            meals: default_meals(),
             last_modified: None,
         }
     }
@@ -110,66 +155,6 @@ pub fn default_stock() -> Vec<StockItem> {
 
 fn s(name: &str, cat: &str, qty: i32, obj: i32) -> StockItem {
     StockItem { name: name.into(), cat: cat.into(), qty, obj }
-}
-
-// ── Menu data ────────────────────────────────────────────────────────────────
-
-pub struct MealOpt {
-    pub emoji: &'static str,
-    pub text: &'static str,
-}
-
-pub struct Meal {
-    pub time: &'static str,
-    pub label: &'static str,
-    pub accent: &'static str, // CSS hex string
-    pub detail: Option<&'static str>,
-    pub options: Option<Vec<MealOpt>>,
-}
-
-pub fn menu_data() -> Vec<Meal> {
-    vec![
-        Meal {
-            time: "08h", label: "Petit-déjeuner", accent: "#E8A87C",
-            detail: Some("Bircher (30g avoine, 5cl lait, 1 yaourt, 1 noix Brésil, 1 cac arachide, 25g amandes)"),
-            options: None,
-        },
-        Meal {
-            time: "10h", label: "Collation", accent: "#85CDCA",
-            detail: Some("1 Kiwi, 2dl Lait, 2dl Jus de fruit"),
-            options: None,
-        },
-        Meal {
-            time: "12h", label: "Dîner", accent: "#D96459",
-            detail: None,
-            options: Some(dinner_options()),
-        },
-        Meal {
-            time: "16h", label: "Goûter", accent: "#C7B198",
-            detail: Some("(Optionnel si faim) : Un peu de fruit ou noix, ou juste de l'eau"),
-            options: None,
-        },
-        Meal {
-            time: "18h", label: "Souper", accent: "#D96459",
-            detail: None,
-            options: Some(dinner_options()),
-        },
-        Meal {
-            time: "20h", label: "Soir", accent: "#F2D388",
-            detail: Some("50g Fromage"),
-            options: None,
-        },
-    ]
-}
-
-fn dinner_options() -> Vec<MealOpt> {
-    vec![
-        MealOpt { emoji: "🥩", text: "Viande Rouge, 200g Pâtes, 150g Épinards, 1 cas H d'olive" },
-        MealOpt { emoji: "🐟", text: "Thon à l'Huile, 200g Riz, 100g Poivrons. 1 cas H d'olive" },
-        MealOpt { emoji: "🐟", text: "Saumon, 200g Pâtes complètes, 150g Carottes, 1 cas H de colza" },
-        MealOpt { emoji: "🫀", text: "Foie de Bœuf, 200g Patates, 150g Épinards. 2 cas H d'olive" },
-        MealOpt { emoji: "🍳", text: "Omelette Lard (3 œufs), 250g Haricots, Salade verte + Radis, 1 cas H de noix" },
-    ]
 }
 
 // ── Category metadata ────────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ export component CoursesView inherits Rectangle {
     in property <int> stat-remaining;
     in property <[CourseCat]> categories;
     in property <bool> is-empty;
+    in property <bool> lang-en;
     in-out property <string> search-text;
 
     callback search-changed(string);
@@ -41,8 +42,8 @@ export component CoursesView inherits Rectangle {
             alignment: stretch; spacing: 8px;
             VerticalLayout {
                 spacing: 2px; horizontal-stretch: 1;
-                Text { text: "Courses"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
-                Text { text: "Cocher = acheté (stock +quantité auto)"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+                Text { text: lang-en ? "Shopping" : "Courses"; font-size: Palette.fs-title; font-weight: 700; color: Palette.text; }
+                Text { text: lang-en ? "Check = purchased (auto stock +qty)" : "Cocher = acheté (stock +quantité auto)"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
             }
             HorizontalLayout {
                 spacing: 6px; alignment: end;
@@ -57,9 +58,9 @@ export component CoursesView inherits Rectangle {
         // Stats
         HorizontalLayout {
             spacing: 8px; height: 64px;
-            StatCard { num: root.stat-total;     lbl: "À ACHETER";  horizontal-stretch: 1; }
-            StatCard { num: root.stat-done;       lbl: "FAIT";       num-color: Palette.green; horizontal-stretch: 1; }
-            StatCard { num: root.stat-remaining;  lbl: "RESTANT";    num-color: Palette.gold;  horizontal-stretch: 1; }
+            StatCard { num: root.stat-total;     lbl: lang-en ? "TO BUY" : "À ACHETER";  horizontal-stretch: 1; }
+            StatCard { num: root.stat-done;       lbl: lang-en ? "DONE" : "FAIT";         num-color: Palette.green; horizontal-stretch: 1; }
+            StatCard { num: root.stat-remaining;  lbl: lang-en ? "LEFT" : "RESTANT";      num-color: Palette.gold;  horizontal-stretch: 1; }
         }
 
         Rectangle { height: 12px; }
@@ -68,7 +69,7 @@ export component CoursesView inherits Rectangle {
         SearchBar {
             height: 38px;
             text <=> root.search-text;
-            placeholder: "Chercher...";
+            placeholder: lang-en ? "Search..." : "Chercher...";
             edited(t) => { root.search-changed(t); }
         }
 
@@ -80,7 +81,7 @@ export component CoursesView inherits Rectangle {
             VerticalLayout {
                 alignment: center; spacing: 8px;
                 Text { text: "✅"; font-size: 32px; horizontal-alignment: center; }
-                Text { text: "Stock complet !"; font-size: 14px; color: Palette.text3; horizontal-alignment: center; }
+                Text { text: lang-en ? "All done!" : "Stock complet !"; font-size: 14px; color: Palette.text3; horizontal-alignment: center; }
             }
         }
 
@@ -137,7 +138,6 @@ export component CoursesView inherits Rectangle {
                                     text: item.name;
                                     font-size: Palette.fs + 0.5px; font-weight: 500;
                                     color: Palette.text;
-                                    // strikethrough not in Slint — handled by opacity above
                                 }
                                 Text {
                                     text: "× " + item.need;

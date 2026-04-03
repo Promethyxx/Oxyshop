@@ -1,7 +1,7 @@
 mod data;
 mod storage;
 
-use data::{AppState, CAT_ORDER, cat_icon, cat_color_hex, menu_data};
+use data::{AppState, CAT_ORDER, cat_icon, cat_color_hex, accent_idx, ACCENT_COLORS};
 use storage::{DavConfig, load_local, save_local, load_config, save_config as save_cfg,
               clear_config, dav_load, dav_save, dav_test, export_json, import_json};
 
@@ -145,31 +145,15 @@ fn make_course_cats(
     (ModelRc::new(VecModel::from(groups)), total, done, remaining)
 }
 
-fn make_meals() -> ModelRc<MealSlot> {
-    let meals: Vec<MealSlot> = menu_data()
-        .into_iter()
-        .map(|m| {
-            let has_options = m.options.is_some();
-            let opts: Vec<MealOption> = m
-                .options
-                .unwrap_or_default()
-                .into_iter()
-                .map(|o| MealOption {
-                    emoji: o.emoji.into(),
-                    text: o.text.into(),
-                })
-                .collect();
-            MealSlot {
-                time: m.time.into(),
-                label: m.label.into(),
-                accent: hex_color(m.accent),
-                has_options,
-                detail: m.detail.unwrap_or("").into(),
-                options: ModelRc::new(VecModel::from(opts)),
-            }
-        })
-        .collect();
-    ModelRc::new(VecModel::from(meals))
+fn make_meals(meals: &[data::MealEntry]) -> ModelRc<MealSlot> {
+    let slots: Vec<MealSlot> = meals.iter().enumerate().map(|(i, m)| MealSlot {
+        time: m.time.clone().into(),
+        label: m.label.clone().into(),
+        accent: hex_color(&m.accent),
+        content: m.content.clone().into(),
+        index: i as i32,
+    }).collect();
+    ModelRc::new(VecModel::from(slots))
 }
 
 // ── App state ─────────────────────────────────────────────────────────────────
@@ -180,6 +164,8 @@ struct App {
     config: DavConfig,
     dav_ok: bool,
     ctx_target: i32,
+    meal_target: i32,
+    lang_en: bool,
 }
 
 impl App {
@@ -190,7 +176,9 @@ impl App {
     }
     fn sync_label(&self) -> SharedString {
         if self.dav_ok { "☁️ WebDAV".into() }
-        else if self.config.is_complete() { "⚠️ Déconnecté".into() }
+        else if self.config.is_complete() {
+            if self.lang_en { "⚠️ Disconnected".into() } else { "⚠️ Déconnecté".into() }
+        }
         else { "💾 Local".into() }
     }
 
@@ -211,13 +199,15 @@ fn main() -> Result<(), slint::PlatformError> {
     let config = load_config();
 
     // Load data: try WebDAV first, fallback local, fallback defaults
-    let state = if config.is_complete() {
+    let mut state = if config.is_complete() {
         dav_load(&config).ok()
     } else {
         None
     }
     .or_else(load_local)
     .unwrap_or_else(AppState::with_defaults);
+    // Fill meals from defaults if not yet in saved state
+    if state.meals.is_empty() { state.meals = data::default_meals(); }
 
     let dav_ok = config.is_complete() && state.last_modified.is_some();
 
@@ -227,6 +217,8 @@ fn main() -> Result<(), slint::PlatformError> {
         config: config.clone(),
         dav_ok,
         ctx_target: -1,
+        meal_target: -1,
+        lang_en: false,
     }));
 
     let ui = AppWindow::new()?;
@@ -250,7 +242,7 @@ fn main() -> Result<(), slint::PlatformError> {
         ui.set_course_remaining(cr);
         ui.set_courses_empty(ct == 0);
 
-        ui.set_meals(make_meals());
+        ui.set_meals(make_meals(&st.state.meals));
 
         ui.set_cfg_url(st.config.url.clone().into());
         ui.set_cfg_user(st.config.user.clone().into());
@@ -291,6 +283,15 @@ fn main() -> Result<(), slint::PlatformError> {
             ui.set_course_done(cd);
             ui.set_course_remaining(cr);
             ui.set_courses_empty(ct == 0);
+        }
+    };
+
+    let refresh_meals = {
+        let ui_weak = ui.as_weak();
+        let app = app_state.clone();
+        move || {
+            let st = app.lock().unwrap();
+            ui_weak.unwrap().set_meals(make_meals(&st.state.meals));
         }
     };
 
@@ -372,8 +373,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let toast = toast.clone();
         move || {
             let st = app.lock().unwrap();
+            let lang = st.lang_en;
             match export_json(&st.state) {
-                Ok(path) => toast(&format!("📤 Exporté : {}", path.file_name().unwrap_or_default().to_string_lossy())),
+                Ok(path) => toast(&format!("📤 {} : {}", if lang { "Exported" } else { "Exporté" }, path.file_name().unwrap_or_default().to_string_lossy())),
                 Err(e) => toast(&format!("⚠️ {}", e)),
             }
         }
@@ -458,7 +460,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 st.state.stock.remove(gi);
                 st.save();
                 drop(st);
-                toast(&format!("🗑️ {}", name));
+                let lang = app.lock().unwrap().lang_en;
+                toast(&format!("🗑️ {}{}", name, if lang { " deleted" } else { "" }));
                 rs(); rc();
             }
         }
@@ -509,12 +512,13 @@ fn main() -> Result<(), slint::PlatformError> {
             let mut st = app.lock().unwrap();
             let gi = st.ctx_target as usize;
 
+            let lang = st.lang_en;
             if is_edit && gi < st.state.stock.len() {
                 st.state.stock[gi] = data::StockItem { name: name.clone(), cat, qty, obj };
-                toast(&format!("✓ {} modifié", name));
+                toast(&format!("✓ {} {}", name, if lang { "edited" } else { "modifié" }));
             } else {
                 st.state.stock.push(data::StockItem { name: name.clone(), cat, qty, obj });
-                toast(&format!("✓ {} ajouté", name));
+                toast(&format!("✓ {} {}", name, if lang { "added" } else { "ajouté" }));
             }
             st.save();
             drop(st);
@@ -546,7 +550,8 @@ fn main() -> Result<(), slint::PlatformError> {
                 st.state.stock[gi].obj = val;
                 st.save();
                 drop(st);
-                toast("✓ Objectif mis à jour");
+                let lang = app.lock().unwrap().lang_en;
+                toast(if lang { "✓ Target updated" } else { "✓ Objectif mis à jour" });
                 rs(); rc();
             }
             ui.set_obj_modal_active(false);
@@ -581,7 +586,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 st.state.checked.insert(k, new_checked);
                 if new_checked {
                     st.state.stock[gi].qty += need;
-                    toast(&format!("✓ +{} {}", need, name));
+                    toast(&format!("✓ +{} {}", need, name)); // qty + name, no translation needed
                 } else {
                     st.state.stock[gi].qty = (st.state.stock[gi].qty - need).max(0);
                 }
@@ -601,19 +606,24 @@ fn main() -> Result<(), slint::PlatformError> {
             st.state.checked.clear();
             st.save();
             drop(st);
-            toast("🔄 Réinitialisé");
+            let lang = app.lock().unwrap().lang_en;
+            toast(if lang { "🔄 Reset" } else { "🔄 Réinitialisé" });
             rc();
         }
     });
 
     // ── Theme ─────────────────────────────────────────────────────────────
 
-    ui.on_theme_toggle({
+    ui.on_lang_toggle({
+        let app = app_state.clone();
         let ui_weak = ui.as_weak();
+        let rs = refresh_sync.clone();
         move || {
             let ui = ui_weak.unwrap();
-            let dark = !ui.get_dark_mode();
-            ui.set_dark_mode(dark);
+            let new_lang = !ui.get_lang_en();
+            ui.set_lang_en(new_lang);
+            app.lock().unwrap().lang_en = new_lang;
+            rs();
         }
     });
 
@@ -633,7 +643,8 @@ fn main() -> Result<(), slint::PlatformError> {
             };
             let _ = save_cfg(&cfg);
             app.lock().unwrap().config = cfg;
-            toast("✅ Config sauvée");
+            let lang = app.lock().unwrap().lang_en;
+            toast(if lang { "✅ Config saved" } else { "✅ Config sauvée" });
             rs();
         }
     });
@@ -650,11 +661,12 @@ fn main() -> Result<(), slint::PlatformError> {
                 user: ui.get_cfg_user().to_string(),
                 pass: ui.get_cfg_pass().to_string(),
             };
-            if !cfg.is_complete() { toast("⚠️ Remplis les 3 champs"); return; }
+            let lang = app.lock().unwrap().lang_en;
+            if !cfg.is_complete() { toast(if lang { "⚠️ Fill all 3 fields" } else { "⚠️ Remplis les 3 champs" }); return; }
             match dav_test(&cfg) {
                 Ok(()) => {
                     app.lock().unwrap().dav_ok = true;
-                    toast("✅ Connexion OK !");
+                    toast(if lang { "✅ Connection OK!" } else { "✅ Connexion OK !" });
                     rs();
                 }
                 Err(e) => toast(&format!("⚠️ {}", e)),
@@ -678,7 +690,8 @@ fn main() -> Result<(), slint::PlatformError> {
             ui.set_cfg_url("".into());
             ui.set_cfg_user("".into());
             ui.set_cfg_pass("".into());
-            toast("🗑️ Config effacée");
+            let lang = app.lock().unwrap().lang_en;
+            toast(if lang { "🗑️ Config cleared" } else { "🗑️ Config effacée" });
             rs();
         }
     });
@@ -688,8 +701,9 @@ fn main() -> Result<(), slint::PlatformError> {
         let toast = toast.clone();
         move || {
             let st = app.lock().unwrap();
+            let lang = st.lang_en;
             match export_json(&st.state) {
-                Ok(p) => toast(&format!("📤 {}", p.file_name().unwrap_or_default().to_string_lossy())),
+                Ok(p) => toast(&format!("📤 {} : {}", if lang { "Exported" } else { "Exporté" }, p.file_name().unwrap_or_default().to_string_lossy())),
                 Err(e) => toast(&format!("⚠️ {}", e)),
             }
         }
@@ -712,11 +726,115 @@ fn main() -> Result<(), slint::PlatformError> {
                         st.state = new_state;
                         st.save();
                         drop(st);
-                        toast(&format!("📥 {} articles importés", count));
+                        let lang = app.lock().unwrap().lang_en;
+                        toast(&format!("📥 {} {}", count, if lang { "items imported" } else { "articles importés" }));
                         rs(); rc();
                     }
                     Err(e) => toast(&format!("⚠️ {}", e)),
                 }
+            }
+        }
+    });
+
+    // ── Meal callbacks ────────────────────────────────────────────────────
+
+    ui.on_meal_add({
+        let ui_weak = ui.as_weak();
+        move || {
+            let ui = ui_weak.unwrap();
+            ui.set_meal_modal_is_edit(false);
+            ui.set_meal_modal_time("".into());
+            ui.set_meal_modal_label("".into());
+            ui.set_meal_modal_content("".into());
+            ui.set_meal_modal_accent_idx(0);
+            ui.set_meal_modal_active(true);
+        }
+    });
+
+    ui.on_meal_edit_open({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        move |idx| {
+            let mut st = app.lock().unwrap();
+            st.meal_target = idx;
+            let i = idx as usize;
+            if i < st.state.meals.len() {
+                let m = &st.state.meals[i];
+                let time = m.time.clone();
+                let label = m.label.clone();
+                let content = m.content.clone();
+                let aidx = accent_idx(&m.accent);
+                drop(st);
+                let ui = ui_weak.unwrap();
+                ui.set_meal_modal_is_edit(true);
+                ui.set_meal_modal_time(time.into());
+                ui.set_meal_modal_label(label.into());
+                ui.set_meal_modal_content(content.into());
+                ui.set_meal_modal_accent_idx(aidx);
+                ui.set_meal_modal_active(true);
+            }
+        }
+    });
+
+    ui.on_meal_modal_cancel({
+        let ui_weak = ui.as_weak();
+        move || { ui_weak.unwrap().set_meal_modal_active(false); }
+    });
+
+    ui.on_meal_modal_confirm({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        let rm = refresh_meals.clone();
+        let toast = toast.clone();
+        move || {
+            let ui = ui_weak.unwrap();
+            let time = ui.get_meal_modal_time().to_string();
+            let label = ui.get_meal_modal_label().to_string();
+            if label.trim().is_empty() { return; }
+            let content = ui.get_meal_modal_content().to_string();
+            let aidx = ui.get_meal_modal_accent_idx() as usize;
+            let accent = ACCENT_COLORS.get(aidx).copied().unwrap_or("#E8A87C").to_string();
+            let is_edit = ui.get_meal_modal_is_edit();
+            let lang = app.lock().unwrap().lang_en;
+
+            let entry = data::MealEntry { time, label: label.clone(), accent, content };
+            let mut st = app.lock().unwrap();
+            let msg;
+            if is_edit {
+                let i = st.meal_target as usize;
+                if i < st.state.meals.len() { st.state.meals[i] = entry; }
+                msg = if lang { format!("✓ {} updated", label) } else { format!("✓ {} modifié", label) };
+            } else {
+                st.state.meals.push(entry);
+                msg = if lang { format!("✓ {} added", label) } else { format!("✓ {} ajouté", label) };
+            }
+            st.save();
+            drop(st);
+            toast(&msg);
+            ui.set_meal_modal_active(false);
+            rm();
+        }
+    });
+
+    ui.on_meal_delete({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        let rm = refresh_meals.clone();
+        let toast = toast.clone();
+        move |idx| {
+            let mut st = app.lock().unwrap();
+            let i = idx as usize;
+            if i < st.state.meals.len() {
+                let name = st.state.meals[i].label.clone();
+                st.state.meals.remove(i);
+                st.save();
+                let lang = st.lang_en;
+                drop(st);
+                let ui = ui_weak.unwrap();
+                ui.set_meal_modal_active(false);
+                let msg = if lang { format!("🗑️ {} deleted", name) } else { format!("🗑️ {} supprimé", name) };
+                toast(&msg);
+                rm();
             }
         }
     });

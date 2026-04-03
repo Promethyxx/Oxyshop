@@ -5,6 +5,7 @@ import { ActionBtn } from "components.slint";
 export component ItemModal inherits Rectangle {
     in-out property <bool>   active: false;
     in property  <bool>      is-edit: false;
+    in property  <bool>      lang-en: false;
     in-out property <string> field-name;
     in-out property <string> field-cat;
     in-out property <string> field-qty-str;
@@ -36,7 +37,7 @@ export component ItemModal inherits Rectangle {
             spacing: 12px;
 
             Text {
-                text: root.is-edit ? "Modifier" : "Nouvel article";
+                text: root.is-edit ? (root.lang-en ? "Edit" : "Modifier") : (root.lang-en ? "New Item" : "Nouvel article");
                 font-size: Palette.fs-title - 8px; font-weight: 600;
                 color: Palette.text;
                 horizontal-alignment: center;
@@ -45,7 +46,7 @@ export component ItemModal inherits Rectangle {
             // Name
             VerticalLayout {
                 spacing: 3px;
-                Text { text: "Nom"; font-size: Palette.fs-md; color: Palette.text2; }
+                Text { text: root.lang-en ? "Name" : "Nom"; font-size: Palette.fs-md; color: Palette.text2; }
                 Rectangle {
                     height: 40px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
@@ -58,7 +59,7 @@ export component ItemModal inherits Rectangle {
                             horizontal-alignment: left;
                         }
                         if name-ti.text == "" && !name-ti.has-focus : Text {
-                            text: "Ex: Lait"; font-size: Palette.fs + 0.5px; color: Palette.text3;
+                            text: root.lang-en ? "e.g. Milk" : "Ex: Lait"; font-size: Palette.fs + 0.5px; color: Palette.text3;
                         }
                     }
                 }
@@ -67,7 +68,7 @@ export component ItemModal inherits Rectangle {
             // Category
             VerticalLayout {
                 spacing: 3px;
-                Text { text: "Catégorie"; font-size: Palette.fs-md; color: Palette.text2; }
+                Text { text: root.lang-en ? "Category" : "Catégorie"; font-size: Palette.fs-md; color: Palette.text2; }
                 Rectangle {
                     height: 40px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
@@ -80,7 +81,7 @@ export component ItemModal inherits Rectangle {
                             horizontal-alignment: left;
                         }
                         if cat-ti.text == "" && !cat-ti.has-focus : Text {
-                            text: "Nourriture"; font-size: Palette.fs + 0.5px; color: Palette.text3;
+                            text: root.lang-en ? "Food" : "Nourriture"; font-size: Palette.fs + 0.5px; color: Palette.text3;
                         }
                     }
                 }
@@ -91,7 +92,7 @@ export component ItemModal inherits Rectangle {
                 spacing: 8px;
                 VerticalLayout {
                     horizontal-stretch: 1; spacing: 3px;
-                    Text { text: "Quantité actuelle"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Text { text: root.lang-en ? "Current qty" : "Quantité actuelle"; font-size: Palette.fs-md; color: Palette.text2; }
                     Rectangle {
                         height: 40px; border-radius: 8px;
                         border-width: 1px; border-color: Palette.card-border;
@@ -109,7 +110,7 @@ export component ItemModal inherits Rectangle {
                 }
                 VerticalLayout {
                     horizontal-stretch: 1; spacing: 3px;
-                    Text { text: "Objectif"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Text { text: root.lang-en ? "Target" : "Objectif"; font-size: Palette.fs-md; color: Palette.text2; }
                     Rectangle {
                         height: 40px; border-radius: 8px;
                         border-width: 1px; border-color: Palette.card-border;
@@ -130,8 +131,8 @@ export component ItemModal inherits Rectangle {
             // Actions
             HorizontalLayout {
                 spacing: 8px;
-                ActionBtn { label: "Annuler"; primary: false; horizontal-stretch: 1; clicked => { root.cancel(); } }
-                ActionBtn { label: root.is-edit ? "OK" : "Ajouter"; primary: true; horizontal-stretch: 1; clicked => { root.confirm(); } }
+                ActionBtn { label: root.lang-en ? "Cancel" : "Annuler"; primary: false; horizontal-stretch: 1; clicked => { root.cancel(); } }
+                ActionBtn { label: root.is-edit ? "OK" : (root.lang-en ? "Add" : "Ajouter"); primary: true; horizontal-stretch: 1; clicked => { root.confirm(); } }
             }
         }
 
@@ -145,6 +146,7 @@ export component ItemModal inherits Rectangle {
 export component ObjModal inherits Rectangle {
     in-out property <bool>   active: false;
     in property  <string>    item-name;
+    in property  <bool>      lang-en: false;
     in-out property <string> value-str;
     callback confirm;
     callback cancel;
@@ -169,14 +171,14 @@ export component ObjModal inherits Rectangle {
             spacing: 12px;
 
             Text {
-                text: "Objectif: " + root.item-name;
+                text: (root.lang-en ? "Target: " : "Objectif: ") + root.item-name;
                 font-size: Palette.fs-title - 8px; font-weight: 600;
                 color: Palette.text; horizontal-alignment: center;
             }
 
             VerticalLayout {
                 spacing: 3px;
-                Text { text: "Nouvel objectif"; font-size: Palette.fs-md; color: Palette.text2; }
+                Text { text: root.lang-en ? "New target" : "Nouvel objectif"; font-size: Palette.fs-md; color: Palette.text2; }
                 Rectangle {
                     height: 40px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
@@ -195,7 +197,7 @@ export component ObjModal inherits Rectangle {
 
             HorizontalLayout {
                 spacing: 8px;
-                ActionBtn { label: "Annuler"; primary: false; horizontal-stretch: 1; clicked => { root.cancel(); } }
+                ActionBtn { label: root.lang-en ? "Cancel" : "Annuler"; primary: false; horizontal-stretch: 1; clicked => { root.cancel(); } }
                 ActionBtn { label: "OK"; primary: true; horizontal-stretch: 1; clicked => { root.confirm(); } }
             }
         }
@@ -210,6 +212,7 @@ export component ObjModal inherits Rectangle {
 export component CtxMenu inherits Rectangle {
     in-out property <bool> active: false;
     in property  <int>     target-index: -1;
+    in property  <bool>    lang-en: false;
     callback edit-item;
     callback obj-item;
     callback del-item;
@@ -241,7 +244,7 @@ export component CtxMenu inherits Rectangle {
                 HorizontalLayout {
                     padding-left: 14px; spacing: 10px; alignment: center;
                     Text { text: "✏️"; font-size: 14px; }
-                    Text { text: "Modifier"; font-size: Palette.fs; color: Palette.text; horizontal-stretch: 1; }
+                    Text { text: root.lang-en ? "Edit" : "Modifier"; font-size: Palette.fs; color: Palette.text; horizontal-stretch: 1; }
                 }
                 r1 := TouchArea { clicked => { root.edit-item(); root.close(); } }
             }
@@ -252,7 +255,7 @@ export component CtxMenu inherits Rectangle {
                 HorizontalLayout {
                     padding-left: 14px; spacing: 10px; alignment: center;
                     Text { text: "🎯"; font-size: 14px; }
-                    Text { text: "Objectif"; font-size: Palette.fs; color: Palette.text; horizontal-stretch: 1; }
+                    Text { text: root.lang-en ? "Target" : "Objectif"; font-size: Palette.fs; color: Palette.text; horizontal-stretch: 1; }
                 }
                 r2 := TouchArea { clicked => { root.obj-item(); root.close(); } }
             }
@@ -263,10 +266,153 @@ export component CtxMenu inherits Rectangle {
                 HorizontalLayout {
                     padding-left: 14px; spacing: 10px; alignment: center;
                     Text { text: "🗑️"; font-size: 14px; }
-                    Text { text: "Supprimer"; font-size: Palette.fs; color: Palette.danger; horizontal-stretch: 1; }
+                    Text { text: root.lang-en ? "Delete" : "Supprimer"; font-size: Palette.fs; color: Palette.danger; horizontal-stretch: 1; }
                 }
                 r3 := TouchArea { clicked => { root.del-item(); root.close(); } }
             }
         }
     }
+}
+
+// ── Meal add / edit modal ─────────────────────────────────────────────────────
+export component MealModal inherits Rectangle {
+    in-out property <bool>   active: false;
+    in-out property <bool>   is-edit: false;
+    in property  <bool>      lang-en: false;
+    in-out property <string> field-time;
+    in-out property <string> field-label;
+    in-out property <string> field-content;
+    in-out property <int>    accent-idx: 0;
+    callback confirm;
+    callback cancel;
+    callback delete(int); // passes meal index back
+
+    property <[color]> accent-colors: [#E8A87C, #85CDCA, #D96459, #C7B198, #F2D388, #B794D6];
+
+    background: active ? rgba(0,0,0,0.7) : transparent;
+    z: 200;
+
+    if active : TouchArea { z: 0; clicked => { root.cancel(); } }
+
+    sheet := Rectangle {
+        y: root.active ? root.height - self.height : root.height;
+        x: (root.width - self.width) / 2;
+        width: min(root.width, 500px);
+        height: sh-col.preferred-height + 40px;
+        border-radius: 16px;
+        background: Palette.bg2;
+
+        TouchArea { z: 0; }
+
+        sh-col := VerticalLayout {
+            z: 1;
+            padding-top: 20px; padding-bottom: 20px;
+            padding-left: 16px; padding-right: 16px;
+            spacing: 10px;
+
+            Text {
+                text: root.is-edit ? (root.lang-en ? "Edit Meal" : "Modifier le repas")
+                                   : (root.lang-en ? "New Meal" : "Nouveau repas");
+                font-size: Palette.fs-title - 8px; font-weight: 600;
+                color: Palette.text; horizontal-alignment: center;
+            }
+
+            // Time + Label on same line
+            HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    spacing: 3px; width: 72px;
+                    Text { text: lang-en ? "Time" : "Heure"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Rectangle {
+                        height: 40px; border-radius: 8px;
+                        border-width: 1px; border-color: Palette.card-border;
+                        background: Palette.card; clip: true;
+                        HorizontalLayout {
+                            padding-left: 8px; alignment: center;
+                            TextInput {
+                                text <=> root.field-time;
+                                font-size: Palette.fs; color: Palette.text;
+                                horizontal-alignment: left;
+                            }
+                        }
+                    }
+                }
+                VerticalLayout {
+                    spacing: 3px; horizontal-stretch: 1;
+                    Text { text: lang-en ? "Title" : "Titre"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Rectangle {
+                        height: 40px; border-radius: 8px;
+                        border-width: 1px; border-color: Palette.card-border;
+                        background: Palette.card; clip: true;
+                        HorizontalLayout {
+                            padding-left: 8px; alignment: center;
+                            lbl-ti := TextInput {
+                                text <=> root.field-label;
+                                font-size: Palette.fs; color: Palette.text;
+                                horizontal-alignment: left;
+                            }
+                            if lbl-ti.text == "" && !lbl-ti.has-focus : Text {
+                                text: lang-en ? "e.g. Breakfast" : "Ex: Petit-déjeuner";
+                                font-size: Palette.fs; color: Palette.text3;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Accent color picker
+            VerticalLayout {
+                spacing: 4px;
+                Text { text: lang-en ? "Color" : "Couleur"; font-size: Palette.fs-md; color: Palette.text2; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    for c[i] in root.accent-colors : Rectangle {
+                        width: 28px; height: 28px; border-radius: 14px;
+                        background: c;
+                        border-width: root.accent-idx == i ? 2px : 0px;
+                        border-color: Palette.text;
+                        TouchArea { clicked => { root.accent-idx = i; } }
+                    }
+                }
+            }
+
+            // Content
+            VerticalLayout {
+                spacing: 3px;
+                Text { text: lang-en ? "Content" : "Contenu"; font-size: Palette.fs-md; color: Palette.text2; }
+                Rectangle {
+                    height: 90px; border-radius: 8px;
+                    border-width: 1px; border-color: Palette.card-border;
+                    background: Palette.card; clip: true;
+                    HorizontalLayout {
+                        padding: 8px;
+                        TextInput {
+                            text <=> root.field-content;
+                            wrap: word-wrap;
+                            font-size: Palette.fs; color: Palette.text;
+                            horizontal-alignment: left; vertical-alignment: top;
+                        }
+                    }
+                }
+            }
+
+            // Delete button (edit mode only)
+            if root.is-edit : ActionBtn {
+                label: lang-en ? "🗑️ Delete" : "🗑️ Supprimer";
+                primary: false; small: true;
+                clicked => { root.delete(0); } // index handled by Rust via meal_target
+            }
+
+            // Actions
+            HorizontalLayout {
+                spacing: 8px;
+                ActionBtn { label: root.lang-en ? "Cancel" : "Annuler"; primary: false; horizontal-stretch: 1; clicked => { root.cancel(); } }
+                ActionBtn { label: root.is-edit ? "OK" : (root.lang-en ? "Add" : "Ajouter"); primary: true; horizontal-stretch: 1; clicked => { root.confirm(); } }
+            }
+        }
+
+        animate y { duration: 300ms; easing: ease-out; }
+    }
+
+    animate background { duration: 200ms; }
 }

@@ -1,10 +1,10 @@
 import { Palette } from "palette.slint";
-import { Toast, SyncBadge } from "components.slint";
+import { Toast, SyncBadge, IconBtn } from "components.slint";
 import { StockView, StockItem, CatGroup } from "stock_view.slint";
 import { CoursesView, CourseItem, CourseCat } from "courses_view.slint";
-import { MenuView, MealSlot, MealOption } from "menu_view.slint";
+import { MenuView, MealSlot } from "menu_view.slint";
 import { ConfigView } from "config_view.slint";
-import { ItemModal, ObjModal, CtxMenu } from "modals.slint";
+import { ItemModal, ObjModal, CtxMenu, MealModal } from "modals.slint";
 
 export enum Tab { Menu, Stock, Courses, Config }
 
@@ -20,6 +20,10 @@ export component AppWindow inherits Window {
 
     // ── Theme ──────────────────────────────────────────────────────────────
     in-out property <bool> dark-mode <=> Palette.dark;
+
+    // ── Language ───────────────────────────────────────────────────────────
+    in-out property <bool> lang-en: false;
+    callback lang-toggle;
 
     // ── Toast ──────────────────────────────────────────────────────────────
     in-out property <string> toast-msg;
@@ -57,9 +61,23 @@ export component AppWindow inherits Window {
 
     // ── Menu ───────────────────────────────────────────────────────────────
     in property <[MealSlot]> meals;
+    callback meal-add;
+    callback meal-edit-open(int);
+    callback meal-delete(int);
+
+    // ── Meal modal ─────────────────────────────────────────────────────────
+    in-out property <bool>   meal-modal-active;
+    in-out property <bool>   meal-modal-is-edit;
+    in-out property <string> meal-modal-time;
+    in-out property <string> meal-modal-label;
+    in-out property <string> meal-modal-content;
+    in-out property <int>    meal-modal-accent-idx;
+    callback meal-modal-confirm;
+    callback meal-modal-cancel;
+
+    // ── Sync ───────────────────────────────────────────────────────────────
     in property <int>    sync-state;
     in property <string> sync-label;
-    callback theme-toggle;
 
     // ── Config ─────────────────────────────────────────────────────────────
     in-out property <string> cfg-url;
@@ -98,14 +116,46 @@ export component AppWindow inherits Window {
 
     // ── Layout ─────────────────────────────────────────────────────────────
     VerticalLayout {
-        // Sync badge strip — visible sur toutes les pages
+        // Global top strip: badge + controls
         Rectangle {
-            height: 22px;
-            background: Palette.bg;
+            height: 42px;
+            background: Palette.bg2;
+            // bottom border
+            Rectangle {
+                y: parent.height - 1px; height: 1px;
+                background: Palette.card-border;
+            }
             HorizontalLayout {
-                padding-left: 16px; padding-right: 16px;
+                padding-left: 12px; padding-right: 10px; spacing: 6px;
+                alignment: center;
+                Text {
+                    text: "Oxyshop";
+                    font-size: Palette.fs-lg; font-weight: 700;
+                    color: Palette.text;
+                    vertical-alignment: center;
+                }
                 SyncBadge { state: root.sync-state; label: root.sync-label; }
                 Rectangle { horizontal-stretch: 1; }
+                // Font controls
+                IconBtn { label: "A−"; clicked => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); } }
+                IconBtn { label: "A+"; clicked => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); } }
+                // Language toggle — circular, gold border when EN active
+                Rectangle {
+                    width: 34px; height: 34px; border-radius: 17px;
+                    border-width: 1px;
+                    border-color: root.lang-en ? Palette.gold : Palette.card-border;
+                    background: lang-ta.pressed ? Palette.card : transparent;
+                    Text {
+                        text: root.lang-en ? "FR" : "EN";
+                        font-size: Palette.fs-xs + 0.5px; font-weight: 700;
+                        color: root.lang-en ? Palette.gold : Palette.text2;
+                        horizontal-alignment: center; vertical-alignment: center;
+                    }
+                    lang-ta := TouchArea { clicked => { root.lang-toggle(); } }
+                    animate background { duration: 150ms; }
+                }
+                // Theme toggle
+                IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { Palette.dark = !Palette.dark; } }
             }
         }
 
@@ -116,9 +166,9 @@ export component AppWindow inherits Window {
 
             if current-tab == Tab.Menu : MenuView {
                 meals: root.meals;
-                theme-toggle => { root.theme-toggle(); }
-                font-smaller  => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
-                font-larger   => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
+                lang-en: root.lang-en;
+                meal-add => { root.meal-add(); }
+                meal-edit-open(i) => { root.meal-edit-open(i); }
             }
 
             if current-tab == Tab.Stock : StockView {
@@ -127,14 +177,12 @@ export component AppWindow inherits Window {
                 stat-low:   root.stat-low;
                 stat-empty: root.stat-empty;
                 categories: root.categories;
+                lang-en:    root.lang-en;
                 search-text <=> root.stock-search;
                 search-changed(t) => { root.stock-search-changed(t); }
                 add-clicked        => { root.item-modal-active = true; }
                 export-clicked     => { root.stock-export(); }
                 import-clicked     => { root.stock-import(); }
-                theme-toggle       => { root.theme-toggle(); }
-                font-smaller       => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
-                font-larger        => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
                 inc(i)             => { root.stock-inc(i); }
                 dec(i)             => { root.stock-dec(i); }
                 toggle-cat(c)      => { root.stock-toggle-cat(c); }
@@ -150,27 +198,23 @@ export component AppWindow inherits Window {
                 stat-remaining: root.course-remaining;
                 categories:     root.course-cats;
                 is-empty:       root.courses-empty;
+                lang-en:        root.lang-en;
                 search-text <=> root.course-search;
                 search-changed(t)  => { root.course-search-changed(t); }
                 toggle-course(i,c) => { root.course-toggle(i, c); }
                 reset-clicked      => { root.courses-reset(); }
-                theme-toggle       => { root.theme-toggle(); }
-                font-smaller       => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
-                font-larger        => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
             }
 
             if current-tab == Tab.Config : ConfigView {
                 dav-url  <=> root.cfg-url;
                 dav-user <=> root.cfg-user;
                 dav-pass <=> root.cfg-pass;
+                lang-en:     root.lang-en;
                 save-config  => { root.cfg-save(); }
                 test-dav     => { root.cfg-test(); }
                 clear-config => { root.cfg-clear(); }
                 export-data  => { root.cfg-export(); }
                 import-data  => { root.cfg-import(); }
-                theme-toggle => { root.theme-toggle(); }
-                font-smaller => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); }
-                font-larger  => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); }
             }
         }
 
@@ -191,7 +235,6 @@ export component AppWindow inherits Window {
                 tab-menu := Rectangle {
                     horizontal-stretch: 1;
                     background: transparent;
-                    // indicator line
                     if current-tab == Tab.Menu : Rectangle {
                         y: 0px; height: 2px;
                         x: parent.width * 0.2;
@@ -202,8 +245,7 @@ export component AppWindow inherits Window {
                     VerticalLayout {
                         alignment: center; spacing: 3px;
                         Text {
-                            text: "≡";
-                            font-size: 20px;
+                            text: "≡"; font-size: 20px;
                             color: current-tab == Tab.Menu ? Palette.gold : Palette.text3;
                             horizontal-alignment: center;
                         }
@@ -230,10 +272,8 @@ export component AppWindow inherits Window {
                     }
                     VerticalLayout {
                         alignment: center; spacing: 3px;
-                        // cube icon approximation
                         Text {
-                            text: "⬡";
-                            font-size: 20px;
+                            text: "⬡"; font-size: 20px;
                             color: current-tab == Tab.Stock ? Palette.gold : Palette.text3;
                             horizontal-alignment: center;
                         }
@@ -261,13 +301,12 @@ export component AppWindow inherits Window {
                     VerticalLayout {
                         alignment: center; spacing: 3px;
                         Text {
-                            text: "🛒";
-                            font-size: 20px;
+                            text: "🛒"; font-size: 20px;
                             color: current-tab == Tab.Courses ? Palette.gold : Palette.text3;
                             horizontal-alignment: center;
                         }
                         Text {
-                            text: "Courses";
+                            text: root.lang-en ? "Shopping" : "Courses";
                             font-size: Palette.fs-xs + 0.5px; font-weight: 500;
                             color: current-tab == Tab.Courses ? Palette.gold : Palette.text3;
                             horizontal-alignment: center;
@@ -290,8 +329,7 @@ export component AppWindow inherits Window {
                     VerticalLayout {
                         alignment: center; spacing: 3px;
                         Text {
-                            text: "⚙";
-                            font-size: 20px;
+                            text: "⚙"; font-size: 20px;
                             color: current-tab == Tab.Config ? Palette.gold : Palette.text3;
                             horizontal-alignment: center;
                         }
@@ -314,6 +352,7 @@ export component AppWindow inherits Window {
         width: root.width; height: root.height;
         active <=> root.item-modal-active;
         is-edit: root.item-modal-is-edit;
+        lang-en: root.lang-en;
         field-name <=> root.item-modal-name;
         field-cat  <=> root.item-modal-cat;
         field-qty-str  <=> root.item-modal-qty-str;
@@ -327,6 +366,7 @@ export component AppWindow inherits Window {
         width: root.width; height: root.height;
         active    <=> root.obj-modal-active;
         item-name:    root.obj-modal-item-name;
+        lang-en:      root.lang-en;
         value-str <=> root.obj-modal-value-str;
         confirm => { root.obj-modal-confirm(); }
         cancel  => { root.obj-modal-cancel(); }
@@ -337,10 +377,26 @@ export component AppWindow inherits Window {
         width: root.width; height: root.height;
         active       <=> root.ctx-active;
         target-index:    root.ctx-target;
+        lang-en:         root.lang-en;
         edit-item => { root.ctx-edit(); }
         obj-item  => { root.ctx-obj(); }
         del-item  => { root.ctx-delete(); }
         close     => { root.ctx-close(); }
+    }
+
+    MealModal {
+        x: 0; y: 0;
+        width: root.width; height: root.height;
+        active      <=> root.meal-modal-active;
+        is-edit     <=> root.meal-modal-is-edit;
+        lang-en:        root.lang-en;
+        field-time  <=> root.meal-modal-time;
+        field-label <=> root.meal-modal-label;
+        field-content <=> root.meal-modal-content;
+        accent-idx  <=> root.meal-modal-accent-idx;
+        confirm  => { root.meal-modal-confirm(); }
+        cancel   => { root.meal-modal-cancel(); }
+        delete(i) => { root.meal-delete(i); }
     }
 
     Toast {
