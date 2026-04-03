@@ -9,6 +9,10 @@ pub fn set_android_data_dir(path: PathBuf) {
     let _ = ANDROID_DATA_DIR.set(path);
 }
 
+pub fn android_data_dir() -> PathBuf {
+    local_dir()
+}
+
 fn local_dir() -> PathBuf {
     #[cfg(target_os = "android")]
     if let Some(p) = ANDROID_DATA_DIR.get() {
@@ -89,10 +93,34 @@ pub fn clear_config() -> std::io::Result<()> {
     Ok(())
 }
 
-// ── WebDAV (blocking) ─────────────────────────────────────────────────────────
+// ── HTTP client ───────────────────────────────────────────────────────────────
+
+pub fn make_client() -> Result<reqwest::blocking::Client, String> {
+    let builder = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(10));
+
+    #[cfg(target_os = "android")]
+    let builder = {
+        let root_store = rustls::RootCertStore {
+            roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+        };
+        let tls = rustls::ClientConfig::builder_with_provider(
+            std::sync::Arc::new(rustls::crypto::aws_lc_rs::default_provider()),
+        )
+        .with_safe_default_protocol_versions()
+        .map_err(|e| format!("tls: {}", e))?
+        .with_root_certificates(root_store)
+        .with_no_client_auth();
+        builder.use_preconfigured_tls(tls)
+    };
+
+    builder.build().map_err(|e| format!("client: {}", e))
+}
+
+// ── WebDAV (blocking — must be called from a background thread) ───────────────
 
 pub fn dav_load(cfg: &DavConfig) -> Result<AppState, String> {
-    let client = reqwest::blocking::Client::new();
+    let client = make_client()?;
     let resp = client
         .get(&cfg.file_url())
         .basic_auth(&cfg.user, Some(&cfg.pass))
@@ -108,7 +136,7 @@ pub fn dav_load(cfg: &DavConfig) -> Result<AppState, String> {
 
 pub fn dav_save(cfg: &DavConfig, state: &AppState) -> Result<(), String> {
     let body = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
-    let client = reqwest::blocking::Client::new();
+    let client = make_client()?;
     let resp = client
         .put(&cfg.file_url())
         .basic_auth(&cfg.user, Some(&cfg.pass))
@@ -126,7 +154,7 @@ pub fn dav_save(cfg: &DavConfig, state: &AppState) -> Result<(), String> {
 }
 
 pub fn dav_test(cfg: &DavConfig) -> Result<(), String> {
-    let client = reqwest::blocking::Client::new();
+    let client = make_client()?;
     let resp = client
         .head(&cfg.file_url())
         .basic_auth(&cfg.user, Some(&cfg.pass))
@@ -145,11 +173,22 @@ pub fn dav_test(cfg: &DavConfig) -> Result<(), String> {
 pub fn export_json(state: &AppState) -> Result<PathBuf, String> {
     let date = chrono_date();
     let filename = format!("oxyshop-{}.json", date);
-    // Export to user's Downloads or home
-    let dest = dirs::download_dir()
-        .or_else(dirs::home_dir)
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join(&filename);
+    let dest = {
+        #[cfg(target_os = "android")]
+        {
+            local_dir().join(&filename)
+        }
+        #[cfg(not(target_os = "android"))]
+        {
+            dirs::download_dir()
+                .or_else(dirs::home_dir)
+                .unwrap_or_else(|| PathBuf::from("."))
+                .join(&filename)
+        }
+    };
+    if let Some(parent) = dest.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
     let text = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
     std::fs::write(&dest, text).map_err(|e| e.to_string())?;
     Ok(dest)
@@ -161,13 +200,11 @@ pub fn import_json(path: &str) -> Result<AppState, String> {
 }
 
 fn chrono_date() -> String {
-    // simple ISO date without chrono dep
     use std::time::{SystemTime, UNIX_EPOCH};
     let secs = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-    // rough: days since epoch
     let days = secs / 86400;
     let y = 1970 + days / 365;
     let d = days % 365;

@@ -114,11 +114,14 @@ export component AppWindow inherits Window {
     callback ctx-delete;
     callback ctx-close;
 
+    // ── Android status bar inset ───────────────────────────────────────────
+    in property <length> status-bar-height: 0px;
+
     // ── Layout ─────────────────────────────────────────────────────────────
     VerticalLayout {
         // Global top strip: badge + controls
         Rectangle {
-            height: 42px;
+            height: 42px + root.status-bar-height;
             background: Palette.bg2;
             // bottom border
             Rectangle {
@@ -126,6 +129,7 @@ export component AppWindow inherits Window {
                 background: Palette.card-border;
             }
             HorizontalLayout {
+                padding-top: root.status-bar-height;
                 padding-left: 12px; padding-right: 10px; spacing: 6px;
                 Text {
                     text: "Oxyshop";

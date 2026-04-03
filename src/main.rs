@@ -180,13 +180,16 @@ impl App {
         else { "💾 Local".into() }
     }
 
+    fn save_bg(state: AppState, cfg: DavConfig) {
+        std::thread::spawn(move || {
+            let _ = dav_save(&cfg, &state);
+        });
+    }
+
     fn save(&mut self) {
         let _ = save_local(&self.state);
         if self.config.is_complete() {
-            match dav_save(&self.config, &self.state) {
-                Ok(()) => { self.dav_ok = true; }
-                Err(_) => { self.dav_ok = false; }
-            }
+            Self::save_bg(self.state.clone(), self.config.clone());
         }
     }
 }
@@ -232,6 +235,10 @@ fn run() {
     }));
 
     let ui = AppWindow::new().unwrap();
+
+    // ── Android status bar inset ──────────────────────────────────────────
+    #[cfg(target_os = "android")]
+    ui.set_status_bar_height(48.0);
 
     // ── Initial population ────────────────────────────────────────────────
 
@@ -396,10 +403,30 @@ fn run() {
         let rs = refresh_stock.clone();
         let rc = refresh_courses.clone();
         let toast = toast.clone();
-        let ui_weak = ui.as_weak();
         move || {
-            toast("📥 Glissez le fichier JSON ici (non implémenté sans rfd)");
-            let _ = (app.clone(), rs.clone(), rc.clone(), ui_weak.clone());
+            #[cfg(not(target_os = "android"))]
+            {
+                let file = rfd::FileDialog::new()
+                    .add_filter("JSON", &["json"])
+                    .pick_file();
+                if let Some(path) = file {
+                    match import_json(path.to_str().unwrap_or("")) {
+                        Ok(new_state) => {
+                            let count = new_state.stock.len();
+                            let mut st = app.lock().unwrap();
+                            st.state = new_state;
+                            st.save();
+                            drop(st);
+                            let lang = app.lock().unwrap().lang_en;
+                            toast(&format!("📥 {} {}", count, if lang { "items imported" } else { "articles importés" }));
+                            rs(); rc();
+                        }
+                        Err(e) => toast(&format!("⚠️ {}", e)),
+                    }
+                }
+            }
+            #[cfg(target_os = "android")]
+            toast("📥 Utiliser Config > Import");
         }
     });
 
@@ -667,14 +694,39 @@ fn run() {
             };
             let lang = app.lock().unwrap().lang_en;
             if !cfg.is_complete() { toast(if lang { "⚠️ Fill all 3 fields" } else { "⚠️ Remplis les 3 champs" }); return; }
-            match dav_test(&cfg) {
-                Ok(()) => {
-                    app.lock().unwrap().dav_ok = true;
-                    toast(if lang { "✅ Connection OK!" } else { "✅ Connexion OK !" });
-                    rs();
-                }
-                Err(e) => toast(&format!("⚠️ {}", e)),
-            }
+            let app2 = app.clone();
+            let rs2 = rs.clone();
+            let ui_weak2 = ui_weak.clone();
+            std::thread::spawn(move || {
+                let result = dav_test(&cfg);
+                let _ = slint::invoke_from_event_loop(move || {
+                    match result {
+                        Ok(()) => {
+                            app2.lock().unwrap().dav_ok = true;
+                            rs2();
+                            if let Some(ui) = ui_weak2.upgrade() {
+                                ui.set_toast_msg(if lang { "✅ Connexion OK !" } else { "✅ Connexion OK !" }.into());
+                                ui.set_toast_show(true);
+                                let ui_w = ui_weak2.clone();
+                                slint::Timer::single_shot(std::time::Duration::from_millis(2000), move || {
+                                    if let Some(u) = ui_w.upgrade() { u.set_toast_show(false); }
+                                });
+                            }
+                        }
+                        Err(e) => {
+                            if let Some(ui) = ui_weak2.upgrade() {
+                                let msg = format!("⚠️ {}", e);
+                                ui.set_toast_msg(msg.into());
+                                ui.set_toast_show(true);
+                                let ui_w = ui_weak2.clone();
+                                slint::Timer::single_shot(std::time::Duration::from_millis(3000), move || {
+                                    if let Some(u) = ui_w.upgrade() { u.set_toast_show(false); }
+                                });
+                            }
+                        }
+                    }
+                });
+            });
         }
     });
 
@@ -742,8 +794,22 @@ fn run() {
             }
             #[cfg(target_os = "android")]
             {
-                let _ = (&app, &rs, &rc);
-                toast("📥 Import non disponible sur Android");
+                // On Android: try to import oxyshop.json from the app data dir
+                let data_dir = storage::android_data_dir();
+                let path = data_dir.join("oxyshop-import.json");
+                let _ = (&rs, &rc);
+                match import_json(path.to_str().unwrap_or("")) {
+                    Ok(new_state) => {
+                        let count = new_state.stock.len();
+                        let mut st = app.lock().unwrap();
+                        st.state = new_state;
+                        st.save();
+                        drop(st);
+                        toast(&format!("📥 {} articles importés", count));
+                        rs(); rc();
+                    }
+                    Err(_) => toast("📥 Placer oxyshop-import.json dans le dossier app"),
+                }
             }
         }
     });
