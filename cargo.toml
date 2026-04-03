@@ -1,19 +1,42 @@
 [package]
 name = "oxyshop"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
+
+[features]
+desktop = []
+
+[[bin]]
+name = "oxyshop"
+path = "src/main.rs"
+required-features = ["desktop"]
+
+[lib]
+crate-type = ["cdylib"]
+name = "oxyshop_lib"
+path = "src/main.rs"
 
 [dependencies]
 base64 = "0.22"
 dirs = "6"
-reqwest = { version = "0.13.2", features = ["blocking", "json"] }
-rfd = "0.17.2"
-serde = { version = "1", features = ["derive"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "blocking", "json"] }
+serde      = { version = "1", features = ["derive"] }
 serde_json = "1"
-slint = "1.9"
+
+# --- Desktop ---
+[target.'cfg(not(target_os = "android"))'.dependencies]
+rfd   = "0.17"
+slint = { version = "1.15", features = ["backend-winit", "renderer-femtovg"] }
+
+# --- Android ---
+[target.'cfg(target_os = "android")'.dependencies]
+slint            = { version = "1.15", features = ["backend-android-activity-06", "renderer-skia"] }
+android-activity = { version = "0.6.1", features = ["native-activity"] }
+webpki-roots     = "0.26"
+rustls           = { version = "0.23", features = ["aws_lc_rs"] }
 
 [build-dependencies]
-slint-build = "1.9"
+slint-build = "1.15"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 winresource = "0.1"
@@ -21,3 +44,20 @@ winresource = "0.1"
 [package.metadata.android]
 package   = "io.github.promethyxx.oxyshop"
 resources = "assets/res"
+
+[package.metadata.android.sdk]
+min_sdk_version    = 36
+target_sdk_version = 36
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.INTERNET"
+
+[package.metadata.android.application]
+label = "Oxyshop"
+icon  = "@mipmap/ic_launcher"
+
+[profile.release]
+opt-level     = "z"
+lto           = true
+codegen-units = 1
+strip         = true

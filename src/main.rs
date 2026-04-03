@@ -41,14 +41,12 @@ fn make_categories(
         }
     }
 
-    // Sort items alphabetically within each category
     for items in cat_map.values_mut() {
         items.sort_by(|a, b| a.1.name.to_lowercase().cmp(&b.1.name.to_lowercase()));
     }
 
     let mut groups: Vec<CatGroup> = Vec::new();
 
-    // Respect CAT_ORDER, then any extra cats
     let mut ordered: Vec<String> = CAT_ORDER.iter().map(|s| s.to_string()).collect();
     for key in cat_map.keys() {
         if !ordered.contains(key) {
@@ -75,7 +73,7 @@ fn make_categories(
             groups.push(CatGroup {
                 name: cat_name.clone().into(),
                 icon: cat_icon(cat_name).into(),
-                color: hex_color(cat_color_hex(cat_name)), // reuse from courses colors
+                color: hex_color(cat_color_hex(cat_name)),
                 items: ModelRc::new(VecModel::from(slint_items)),
                 missing,
                 open,
@@ -110,14 +108,12 @@ fn make_course_cats(
         .count() as i32;
     let remaining = total - done;
 
-    // Sort: unchecked first
     let mut sorted = needed.clone();
     sorted.sort_by_key(|(_, i)| {
         let k = AppState::checked_key(&i.cat, &i.name);
         if *checked.get(&k).unwrap_or(&false) { 1 } else { 0 }
     });
 
-    // Group by cat
     let mut cat_map: std::collections::BTreeMap<String, Vec<CourseItem>> =
         std::collections::BTreeMap::new();
     for (gi, item) in &sorted {
@@ -195,12 +191,26 @@ impl App {
     }
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// ── Entry points ──────────────────────────────────────────────────────────────
 
-fn main() -> Result<(), slint::PlatformError> {
+#[cfg(target_os = "android")]
+#[unsafe(no_mangle)]
+fn android_main(app: slint::android::AndroidApp) {
+    if let Some(path) = app.internal_data_path() {
+        storage::set_android_data_dir(path);
+    }
+    slint::android::init(app).unwrap();
+    run();
+}
+
+#[cfg(not(target_os = "android"))]
+fn main() { run(); }
+
+// ── Run ───────────────────────────────────────────────────────────────────────
+
+fn run() {
     let config = load_config();
 
-    // Load data: try WebDAV first, fallback local, fallback defaults
     let (mut state, dav_ok) = if config.is_complete() {
         match dav_load(&config) {
             Ok(s) => (s, true),
@@ -209,7 +219,6 @@ fn main() -> Result<(), slint::PlatformError> {
     } else {
         (load_local().unwrap_or_else(AppState::with_defaults), false)
     };
-    // Fill meals from defaults if not yet in saved state
     if state.meals.is_empty() { state.meals = data::default_meals(); }
 
     let app_state = Arc::new(Mutex::new(App {
@@ -222,7 +231,7 @@ fn main() -> Result<(), slint::PlatformError> {
         lang_en: false,
     }));
 
-    let ui = AppWindow::new()?;
+    let ui = AppWindow::new().unwrap();
 
     // ── Initial population ────────────────────────────────────────────────
 
@@ -389,16 +398,11 @@ fn main() -> Result<(), slint::PlatformError> {
         let toast = toast.clone();
         let ui_weak = ui.as_weak();
         move || {
-            // Open file dialog — rfd
-            // For now, prompt via native dialog if rfd available
-            // Fallback: use a fixed path from env or show toast
-            // We'll use rfd if it compiles, else skip
             toast("📥 Glissez le fichier JSON ici (non implémenté sans rfd)");
             let _ = (app.clone(), rs.clone(), rc.clone(), ui_weak.clone());
         }
     });
 
-    // Context menu trigger from stock (long press fires ctx-edit callback)
     ui.on_stock_ctx_edit({
         let app = app_state.clone();
         let ui_weak = ui.as_weak();
@@ -478,7 +482,6 @@ fn main() -> Result<(), slint::PlatformError> {
                 ui.set_obj_modal_item_name(item.name.clone().into());
                 ui.set_obj_modal_value_str(item.obj.to_string().into());
                 ui.set_obj_modal_active(true);
-                // store target
                 drop(st);
                 app.lock().unwrap().ctx_target = gi;
             }
@@ -587,7 +590,7 @@ fn main() -> Result<(), slint::PlatformError> {
                 st.state.checked.insert(k, new_checked);
                 if new_checked {
                     st.state.stock[gi].qty += need;
-                    toast(&format!("✓ +{} {}", need, name)); // qty + name, no translation needed
+                    toast(&format!("✓ +{} {}", need, name));
                 } else {
                     st.state.stock[gi].qty = (st.state.stock[gi].qty - need).max(0);
                 }
@@ -716,23 +719,31 @@ fn main() -> Result<(), slint::PlatformError> {
         let rc = refresh_courses.clone();
         let toast = toast.clone();
         move || {
-            let file = rfd::FileDialog::new()
-                .add_filter("JSON", &["json"])
-                .pick_file();
-            if let Some(path) = file {
-                match import_json(path.to_str().unwrap_or("")) {
-                    Ok(new_state) => {
-                        let count = new_state.stock.len();
-                        let mut st = app.lock().unwrap();
-                        st.state = new_state;
-                        st.save();
-                        drop(st);
-                        let lang = app.lock().unwrap().lang_en;
-                        toast(&format!("📥 {} {}", count, if lang { "items imported" } else { "articles importés" }));
-                        rs(); rc();
+            #[cfg(not(target_os = "android"))]
+            {
+                let file = rfd::FileDialog::new()
+                    .add_filter("JSON", &["json"])
+                    .pick_file();
+                if let Some(path) = file {
+                    match import_json(path.to_str().unwrap_or("")) {
+                        Ok(new_state) => {
+                            let count = new_state.stock.len();
+                            let mut st = app.lock().unwrap();
+                            st.state = new_state;
+                            st.save();
+                            drop(st);
+                            let lang = app.lock().unwrap().lang_en;
+                            toast(&format!("📥 {} {}", count, if lang { "items imported" } else { "articles importés" }));
+                            rs(); rc();
+                        }
+                        Err(e) => toast(&format!("⚠️ {}", e)),
                     }
-                    Err(e) => toast(&format!("⚠️ {}", e)),
                 }
+            }
+            #[cfg(target_os = "android")]
+            {
+                let _ = (&app, &rs, &rc);
+                toast("📥 Import non disponible sur Android");
             }
         }
     });
@@ -840,5 +851,5 @@ fn main() -> Result<(), slint::PlatformError> {
         }
     });
 
-    ui.run()
+    ui.run().unwrap();
 }

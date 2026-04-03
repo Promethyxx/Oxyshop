@@ -1,18 +1,31 @@
 use crate::data::AppState;
 use std::path::PathBuf;
 
-fn data_path() -> PathBuf {
-    let base = dirs::data_local_dir()
+#[cfg(target_os = "android")]
+static ANDROID_DATA_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+#[cfg(target_os = "android")]
+pub fn set_android_data_dir(path: PathBuf) {
+    let _ = ANDROID_DATA_DIR.set(path);
+}
+
+fn local_dir() -> PathBuf {
+    #[cfg(target_os = "android")]
+    if let Some(p) = ANDROID_DATA_DIR.get() {
+        return p.clone();
+    }
+    dirs::data_local_dir()
         .or_else(dirs::home_dir)
-        .unwrap_or_else(|| PathBuf::from("."));
-    base.join("oxyshop").join("oxyshop.json")
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("oxyshop")
+}
+
+fn data_path() -> PathBuf {
+    local_dir().join("oxyshop.json")
 }
 
 fn config_path() -> PathBuf {
-    let base = dirs::data_local_dir()
-        .or_else(dirs::home_dir)
-        .unwrap_or_else(|| PathBuf::from("."));
-    base.join("oxyshop").join("config.json")
+    local_dir().join("config.json")
 }
 
 // ── Local JSON ────────────────────────────────────────────────────────────────
