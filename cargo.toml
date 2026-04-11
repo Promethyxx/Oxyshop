@@ -32,7 +32,7 @@ slint = { version = "1.15", features = ["backend-winit", "renderer-femtovg"] }
 [target.'cfg(target_os = "android")'.dependencies]
 slint            = { version = "1.15", features = ["backend-android-activity-06", "renderer-skia"] }
 android-activity = { version = "0.6.1", features = ["native-activity"] }
-webpki-roots     = "0.26"
+webpki-roots     = "1.0.6"
 rustls           = { version = "0.23", features = ["aws_lc_rs"] }
 
 [build-dependencies]
