@@ -3,6 +3,24 @@
 version = 4
 
 [[package]]
+name = "Oxyshop"
+version = "0.6.1"
+dependencies = [
+ "android-activity 0.6.1",
+ "base64",
+ "dirs",
+ "reqwest",
+ "rfd",
+ "rustls",
+ "serde",
+ "serde_json",
+ "slint",
+ "slint-build",
+ "webpki-roots",
+ "winresource",
+]
+
+[[package]]
 name = "ab_glyph"
 version = "0.2.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3608,24 +3626,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "36820e9051aca1014ddc75770aab4d68bc1e9e632f0f5627c4086bc216fb583b"
 dependencies = [
  "ttf-parser",
-]
-
-[[package]]
-name = "oxyshop"
-version = "0.6.1"
-dependencies = [
- "android-activity 0.6.1",
- "base64",
- "dirs",
- "reqwest",
- "rfd",
- "rustls",
- "serde",
- "serde_json",
- "slint",
- "slint-build",
- "webpki-roots",
- "winresource",
 ]
 
 [[package]]
