@@ -2,7 +2,7 @@
 [![License](https://img.shields.io/badge/license-GPL--3.0-blue.svg)](LICENSE.txt)
 [![Rust](https://img.shields.io/badge/rust-2024%20edition-orange.svg)](https://www.rust-lang.org/)
 # Oxyshop
-## Rust GUI inventory management app with specific purpose on food shopping
+## Rust portable GUI inventory management app with specific purpose on food shopping
 ---
 ## Languages supported
 - English
