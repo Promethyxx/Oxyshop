@@ -5,6 +5,9 @@ fn main() {
 
 #[cfg(target_os = "windows")]
 fn windows_resources() {
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
+        return;
+    }
     let icon = std::path::Path::new("assets/Oxyshop_icon.ico");
     if icon.exists() {
         let mut res = winresource::WindowsResource::new();
