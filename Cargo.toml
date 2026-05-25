@@ -1,19 +1,19 @@
 [package]
 name = "Oxyshop"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2024"
 
 [features]
 desktop = []
 
 [[bin]]
-name = "oxyshop"
+name = "Oxyshop"
 path = "src/main.rs"
 required-features = ["desktop"]
 
 [lib]
 crate-type = ["cdylib"]
-name = "oxyshop_lib"
+name = "Oxyshop_And"
 path = "src/main.rs"
 
 [dependencies]
