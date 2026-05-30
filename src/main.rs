@@ -1,5 +1,3 @@
-#![windows_subsystem = "windows"]
-
 mod data;
 mod storage;
 

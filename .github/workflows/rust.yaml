@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE26: true
 jobs:
   build:
     strategy:
@@ -87,18 +89,26 @@ jobs:
       uses: android-actions/setup-android@v3
     - name: Install Android NDK
       run: |
-        sdkmanager "ndk;27.2.12479018"
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
+        sdkmanager "ndk;28.0.13004108"
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.0.13004108" >> $GITHUB_ENV
+    - name: Setup keystore
+      env:
+        KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
+        STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+      run: |
+        echo "$KEYSTORE_B64" | base64 -d > "$GITHUB_WORKSPACE/keystore.jks"
+        printf '\n[package.metadata.android.signing.release]\npath = "%s/keystore.jks"\n' "$GITHUB_WORKSPACE" >> Cargo.toml
+        printf 'keystore_password = "%s"\n' "$STORE_PASSWORD" >> Cargo.toml
     - name: Install cargo-apk
       run: cargo install cargo-apk
     - name: Build APK
-      run: cargo apk build --release
+      run: cargo apk build --release --lib
       env:
         ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
     - name: Rename APK
       run: |
         mkdir -p apk_out
-        cp target/release/apk/*.apk apk_out/Oxyshop_And.apk
+        find target -name "*.apk" -exec cp {} apk_out/Oxyshop_And.apk \;
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
