@@ -4,7 +4,7 @@ import { StockView, StockItem, CatGroup } from "stock_view.slint";
 import { CoursesView, CourseItem, CourseCat } from "courses_view.slint";
 import { MenuView, MealSlot } from "menu_view.slint";
 import { ConfigView } from "config_view.slint";
-import { ItemModal, ObjModal, CtxMenu, MealModal } from "modals.slint";
+import { ItemModal, ObjModal, QtyModal, CtxMenu, MealModal } from "modals.slint";
 
 export enum Tab { Menu, Stock, Courses, Config }
 
@@ -44,6 +44,7 @@ export component AppWindow inherits Window {
     callback stock-export;
     callback stock-import;
     callback stock-obj-clicked(int);
+    callback stock-qty-clicked(int);
     callback stock-ctx-edit(int);
     callback stock-ctx-delete(int);
     callback stock-ctx-obj(int);
@@ -105,6 +106,13 @@ export component AppWindow inherits Window {
     in-out property <string> obj-modal-value-str;
     callback obj-modal-confirm;
     callback obj-modal-cancel;
+
+    // ── Qty modal ──────────────────────────────────────────────────────────
+    in-out property <bool>   qty-modal-active;
+    in property <string>     qty-modal-item-name;
+    in-out property <string> qty-modal-value-str;
+    callback qty-modal-confirm;
+    callback qty-modal-cancel;
 
     // ── Ctx menu ───────────────────────────────────────────────────────────
     in-out property <bool> ctx-active;
@@ -190,6 +198,7 @@ export component AppWindow inherits Window {
                 dec(i)             => { root.stock-dec(i); }
                 toggle-cat(c)      => { root.stock-toggle-cat(c); }
                 obj-clicked(i)     => { root.stock-obj-clicked(i); }
+                qty-clicked(i)     => { root.stock-qty-clicked(i); }
                 ctx-edit(i)        => { root.stock-ctx-edit(i); }
                 ctx-delete(i)      => { root.stock-ctx-delete(i); }
                 ctx-obj(i)         => { root.stock-ctx-obj(i); }
@@ -373,6 +382,17 @@ export component AppWindow inherits Window {
         value-str <=> root.obj-modal-value-str;
         confirm => { root.obj-modal-confirm(); }
         cancel  => { root.obj-modal-cancel(); }
+    }
+
+    QtyModal {
+        x: 0; y: 0;
+        width: root.width; height: root.height;
+        active    <=> root.qty-modal-active;
+        item-name:    root.qty-modal-item-name;
+        lang-en:      root.lang-en;
+        value-str <=> root.qty-modal-value-str;
+        confirm => { root.qty-modal-confirm(); }
+        cancel  => { root.qty-modal-cancel(); }
     }
 
     CtxMenu {

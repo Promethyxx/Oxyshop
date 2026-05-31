@@ -587,6 +587,52 @@ fn run() {
         }
     });
 
+    // ── Qty modal ─────────────────────────────────────────────────────────
+
+    ui.on_stock_qty_clicked({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        move |gi| {
+            let st = app.lock().unwrap();
+            if let Some(item) = st.state.stock.get(gi as usize) {
+                let ui = ui_weak.unwrap();
+                ui.set_qty_modal_item_name(item.name.clone().into());
+                ui.set_qty_modal_value_str(item.qty.to_string().into());
+                ui.set_qty_modal_active(true);
+                drop(st);
+                app.lock().unwrap().ctx_target = gi;
+            }
+        }
+    });
+
+    ui.on_qty_modal_cancel({
+        let ui_weak = ui.as_weak();
+        move || { ui_weak.unwrap().set_qty_modal_active(false); }
+    });
+
+    ui.on_qty_modal_confirm({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        let rs = refresh_stock.clone();
+        let rc = refresh_courses.clone();
+        let toast = toast.clone();
+        move || {
+            let ui = ui_weak.unwrap();
+            let val: i32 = ui.get_qty_modal_value_str().parse().unwrap_or(0).max(0);
+            let mut st = app.lock().unwrap();
+            let gi = st.ctx_target as usize;
+            if gi < st.state.stock.len() {
+                st.state.stock[gi].qty = val;
+                st.save();
+                drop(st);
+                let lang = app.lock().unwrap().lang_en;
+                toast(if lang { "✓ Quantity updated" } else { "✓ Quantité mise à jour" });
+                rs(); rc();
+            }
+            ui.set_qty_modal_active(false);
+        }
+    });
+
     // ── Courses callbacks ─────────────────────────────────────────────────
 
     ui.on_course_search_changed({

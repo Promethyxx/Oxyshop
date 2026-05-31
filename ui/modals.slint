@@ -416,3 +416,68 @@ export component MealModal inherits Rectangle {
 
     animate background { duration: 200ms; }
 }
+
+// ── Qty edit modal ────────────────────────────────────────────────────────────
+export component QtyModal inherits Rectangle {
+    in-out property <bool>   active: false;
+    in property  <string>    item-name;
+    in property  <bool>      lang-en: false;
+    in-out property <string> value-str;
+    callback confirm;
+    callback cancel;
+
+    background: active ? rgba(0,0,0,0.7) : transparent;
+    z: 200;
+
+    if active : TouchArea { z: 0; clicked => { root.cancel(); } }
+
+    sheet := Rectangle {
+        y: root.active ? root.height - self.height : root.height;
+        x: (root.width - self.width) / 2;
+        width: min(root.width, 500px);
+        height: sh-col.preferred-height + 40px;
+        border-radius: 16px;
+        background: Palette.bg2;
+
+        sh-col := VerticalLayout {
+            padding-top: 20px; padding-bottom: 20px;
+            padding-left: 16px; padding-right: 16px;
+            spacing: 12px;
+
+            Text {
+                text: (root.lang-en ? "Stock: " : "Stock : ") + root.item-name;
+                font-size: Palette.fs-title - 8px; font-weight: 600;
+                color: Palette.text; horizontal-alignment: center;
+            }
+
+            VerticalLayout {
+                spacing: 3px;
+                Text { text: root.lang-en ? "New quantity" : "Nouvelle quantité"; font-size: Palette.fs-md; color: Palette.text2; }
+                Rectangle {
+                    height: 40px; border-radius: 8px;
+                    border-width: 1px; border-color: Palette.card-border;
+                    background: Palette.card; clip: true;
+                    HorizontalLayout {
+                        padding-left: 10px; alignment: center;
+                        TextInput {
+                            text <=> root.value-str;
+                            input-type: number;
+                            font-size: Palette.fs + 0.5px; color: Palette.text;
+                            horizontal-alignment: left;
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                ActionBtn { label: root.lang-en ? "Cancel" : "Annuler"; primary: false; horizontal-stretch: 1; clicked => { root.cancel(); } }
+                ActionBtn { label: "OK"; primary: true; horizontal-stretch: 1; clicked => { root.confirm(); } }
+            }
+        }
+
+        animate y { duration: 300ms; easing: ease-out; }
+    }
+
+    animate background { duration: 200ms; }
+}

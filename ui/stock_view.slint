@@ -42,6 +42,7 @@ export component StockView inherits Rectangle {
     callback ctx-delete(int);
     callback ctx-obj(int);
     callback obj-clicked(int);
+    callback qty-clicked(int);
     callback toggle-cat(string);
 
     VerticalLayout {
@@ -179,11 +180,17 @@ export component StockView inherits Rectangle {
                                 HorizontalLayout {
                                     spacing: 5px; horizontal-stretch: 0; alignment: center;
                                     PmBtn { label: "−"; clicked => { root.dec(item.global-index); } }
-                                    Text {
-                                        text: item.qty;
-                                        font-size: Palette.fs-lg; font-weight: 700;
-                                        color: Palette.text; width: 26px;
-                                        horizontal-alignment: center; vertical-alignment: center;
+                                    Rectangle {
+                                        width: qty-txt.preferred-width + 10px;
+                                        height: 26px; border-radius: 4px;
+                                        background: qty-ta.pressed ? Palette.card-border : transparent;
+                                        qty-txt := Text {
+                                            text: item.qty;
+                                            font-size: Palette.fs-lg; font-weight: 700;
+                                            color: Palette.text;
+                                            horizontal-alignment: center; vertical-alignment: center;
+                                        }
+                                        qty-ta := TouchArea { clicked => { root.qty-clicked(item.global-index); } }
                                     }
                                     PmBtn { label: "+"; clicked => { root.inc(item.global-index); } }
                                     Rectangle {
