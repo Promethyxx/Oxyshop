@@ -36,4 +36,11 @@ This project is licensed under the GNU General Public License v3.0 — see Licen
 
 ---
 ## Roadmap
-https://github.com/Promethyxx/Oxyon
+## 🔴 NOW
+## 🟡 NEXT
+ - ### Release:
+    - Chocolatey
+    - MS Store
+    - Winget
+## 🔵 LATER
+---
