@@ -7,11 +7,19 @@ export component ConfigView inherits Rectangle {
     in-out property <string> dav-url;
     in-out property <string> dav-user;
     in-out property <string> dav-pass;
+    // WebDAV2
+    in-out property <string> dav2-url;
+    in-out property <string> dav2-user;
+    in-out property <string> dav2-pass;
+    in-out property <bool>   dav2-enabled: false;
     in property <bool> lang-en;
 
     callback save-config;
     callback test-dav;
     callback clear-config;
+    callback save-config2;
+    callback test-dav2;
+    callback clear-config2;
     callback export-data;
     callback import-data;
     callback theme-toggle;
@@ -37,7 +45,7 @@ export component ConfigView inherits Rectangle {
             cfg-col := VerticalLayout {
                 spacing: 10px;
 
-                // WebDAV section
+                // ── WebDAV primaire ───────────────────────────────────────────
                 Rectangle {
                     border-radius: 12px;
                     border-width: 1px;
@@ -139,7 +147,137 @@ export component ConfigView inherits Rectangle {
                     }
                 }
 
-                // Import / Export section
+                // ── WebDAV secondaire (optionnel) ─────────────────────────────
+                Rectangle {
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: dav2-enabled ? Palette.gold : Palette.card-border;
+                    background: Palette.card;
+
+                    VerticalLayout {
+                        padding: 14px; spacing: 8px;
+
+                        // Header + toggle
+                        HorizontalLayout {
+                            spacing: 8px;
+
+                            Text {
+                                text: lang-en ? "☁️  WEBDAV 2 (OPTIONAL BACKUP)" : "☁️  WEBDAV 2 (SAUVEGARDE OPTIONNELLE)";
+                                font-size: Palette.fs-xs + 0.5px; font-weight: 600;
+                                color: dav2-enabled ? Palette.gold : Palette.text3;
+                                letter-spacing: 1px;
+                                horizontal-stretch: 1;
+                                vertical-alignment: center;
+                            }
+
+                            // Toggle enabled
+                            Rectangle {
+                                width: 54px; height: 26px;
+                                border-radius: 13px;
+                                background: dav2-enabled ? Palette.gold : Palette.card-border;
+                                animate background { duration: 150ms; }
+                                TouchArea {
+                                    clicked => { root.dav2-enabled = !root.dav2-enabled; }
+                                }
+                                // Knob
+                                Rectangle {
+                                    width: 20px; height: 20px;
+                                    border-radius: 10px;
+                                    background: white;
+                                    x: dav2-enabled ? parent.width - self.width - 3px : 3px;
+                                    y: (parent.height - self.height) / 2;
+                                    animate x { duration: 150ms; }
+                                }
+                            }
+                        }
+
+                        // URL2
+                        VerticalLayout {
+                            spacing: 3px;
+                            Text { text: lang-en ? "WebDAV folder URL" : "URL du dossier WebDAV"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+                            Rectangle {
+                                height: 36px; border-radius: 8px;
+                                border-width: 1px;
+                                border-color: url2-ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
+                                background: Palette.card; clip: true;
+                                url2-ti := TextInput {
+                                    x: 8px; y: 0px;
+                                    width: parent.width - 16px;
+                                    height: parent.height;
+                                    text <=> root.dav2-url;
+                                    font-size: Palette.fs - 0.5px; color: Palette.text;
+                                    horizontal-alignment: left; vertical-alignment: center;
+                                }
+                                if url2-ti.text == "" && !url2-ti.has-focus : Text {
+                                    x: 8px; y: (parent.height - self.preferred-height) / 2;
+                                    text: "https://cloud.disroot.org/remote.php/dav/files/user/Oxy/";
+                                    font-size: Palette.fs - 0.5px; color: Palette.text3;
+                                }
+                            }
+                        }
+
+                        // User2
+                        VerticalLayout {
+                            spacing: 3px;
+                            Text { text: lang-en ? "Username" : "Nom d'utilisateur"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+                            Rectangle {
+                                height: 36px; border-radius: 8px;
+                                border-width: 1px;
+                                border-color: user2-ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
+                                background: Palette.card; clip: true;
+                                user2-ti := TextInput {
+                                    x: 8px; y: 0px;
+                                    width: parent.width - 16px;
+                                    height: parent.height;
+                                    text <=> root.dav2-user;
+                                    font-size: Palette.fs - 0.5px; color: Palette.text;
+                                    horizontal-alignment: left; vertical-alignment: center;
+                                }
+                                if user2-ti.text == "" && !user2-ti.has-focus : Text {
+                                    x: 8px; y: (parent.height - self.preferred-height) / 2;
+                                    text: "ton@email.com";
+                                    font-size: Palette.fs - 0.5px; color: Palette.text3;
+                                }
+                            }
+                        }
+
+                        // Pass2
+                        VerticalLayout {
+                            spacing: 3px;
+                            Text { text: lang-en ? "Password (or app password)" : "Mot de passe (ou app password)"; font-size: Palette.fs-md - 0.5px; color: Palette.text2; }
+                            Rectangle {
+                                height: 36px; border-radius: 8px;
+                                border-width: 1px;
+                                border-color: pass2-ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
+                                background: Palette.card; clip: true;
+                                pass2-ti := TextInput {
+                                    x: 8px; y: 0px;
+                                    width: parent.width - 16px;
+                                    height: parent.height;
+                                    text <=> root.dav2-pass;
+                                    input-type: password;
+                                    font-size: Palette.fs - 0.5px; color: Palette.text;
+                                    horizontal-alignment: left; vertical-alignment: center;
+                                }
+                                if pass2-ti.text == "" && !pass2-ti.has-focus : Text {
+                                    x: 8px; y: (parent.height - self.preferred-height) / 2;
+                                    text: "••••••••";
+                                    font-size: Palette.fs - 0.5px; color: Palette.text3;
+                                }
+                            }
+                        }
+
+                        // Buttons2
+                        HorizontalLayout {
+                            spacing: 8px;
+                            ActionBtn { label: lang-en ? "Save" : "Sauver";   primary: true;  small: true; width: 80px;  clicked => { root.save-config2(); } }
+                            ActionBtn { label: lang-en ? "Test" : "Tester";   primary: false; small: true; width: 80px;  clicked => { root.test-dav2(); } }
+                            ActionBtn { label: lang-en ? "Clear" : "Effacer"; primary: false; small: true; width: 80px;  clicked => { root.clear-config2(); } }
+                        }
+                    }
+                }
+
+                // ── Import / Export ───────────────────────────────────────────
                 Rectangle {
                     border-radius: 12px;
                     border-width: 1px;
@@ -157,8 +295,8 @@ export component ConfigView inherits Rectangle {
 
                         HorizontalLayout {
                             spacing: 8px;
-                            ActionBtn { label: lang-en ? "📤 Export" : "📤 Exporter";     primary: false; small: true; width: 120px; clicked => { root.export-data(); } }
-                            ActionBtn { label: lang-en ? "📂 Browse..." : "📂 Parcourir..."; primary: true; small: true; width: 140px; clicked => { root.import-data(); } }
+                            ActionBtn { label: lang-en ? "📤 Export" : "📤 Exporter";        primary: false; small: true; width: 120px; clicked => { root.export-data(); } }
+                            ActionBtn { label: lang-en ? "📂 Browse..." : "📂 Parcourir..."; primary: true;  small: true; width: 140px; clicked => { root.import-data(); } }
                         }
                     }
                 }

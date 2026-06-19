@@ -80,13 +80,24 @@ export component AppWindow inherits Window {
     in property <int>    sync-state;
     in property <string> sync-label;
 
-    // ── Config ─────────────────────────────────────────────────────────────
+    // ── Config DAV1 ────────────────────────────────────────────────────────
     in-out property <string> cfg-url;
     in-out property <string> cfg-user;
     in-out property <string> cfg-pass;
     callback cfg-save;
     callback cfg-test;
     callback cfg-clear;
+
+    // ── Config DAV2 ────────────────────────────────────────────────────────
+    in-out property <string> cfg2-url;
+    in-out property <string> cfg2-user;
+    in-out property <string> cfg2-pass;
+    in-out property <bool>   cfg2-enabled;
+    callback cfg2-save;
+    callback cfg2-test;
+    callback cfg2-clear;
+
+    // ── Export / Import ────────────────────────────────────────────────────
     callback cfg-export;
     callback cfg-import;
 
@@ -131,7 +142,6 @@ export component AppWindow inherits Window {
         Rectangle {
             height: 42px + root.status-bar-height;
             background: Palette.bg2;
-            // bottom border
             Rectangle {
                 y: parent.height - 1px; height: 1px;
                 background: Palette.card-border;
@@ -147,10 +157,8 @@ export component AppWindow inherits Window {
                 }
                 SyncBadge { state: root.sync-state; label: root.sync-label; }
                 Rectangle { horizontal-stretch: 1; }
-                // Font controls
                 IconBtn { label: "A−"; clicked => { Palette.font-scale = max(Palette.font-scale - 2px, -4px); } }
                 IconBtn { label: "A+"; clicked => { Palette.font-scale = min(Palette.font-scale + 2px,  6px); } }
-                // Language toggle — circular, gold border when EN active
                 Rectangle {
                     width: 34px; height: 34px; border-radius: 17px;
                     border-width: 1px;
@@ -165,7 +173,6 @@ export component AppWindow inherits Window {
                     lang-ta := TouchArea { clicked => { root.lang-toggle(); } }
                     animate background { duration: 150ms; }
                 }
-                // Theme toggle
                 IconBtn { label: Palette.dark ? "🌙" : "☀️"; clicked => { Palette.dark = !Palette.dark; } }
             }
         }
@@ -218,15 +225,22 @@ export component AppWindow inherits Window {
             }
 
             if current-tab == Tab.Config : ConfigView {
-                dav-url  <=> root.cfg-url;
-                dav-user <=> root.cfg-user;
-                dav-pass <=> root.cfg-pass;
-                lang-en:     root.lang-en;
-                save-config  => { root.cfg-save(); }
-                test-dav     => { root.cfg-test(); }
-                clear-config => { root.cfg-clear(); }
-                export-data  => { root.cfg-export(); }
-                import-data  => { root.cfg-import(); }
+                dav-url      <=> root.cfg-url;
+                dav-user     <=> root.cfg-user;
+                dav-pass     <=> root.cfg-pass;
+                dav2-url     <=> root.cfg2-url;
+                dav2-user    <=> root.cfg2-user;
+                dav2-pass    <=> root.cfg2-pass;
+                dav2-enabled <=> root.cfg2-enabled;
+                lang-en:         root.lang-en;
+                save-config      => { root.cfg-save(); }
+                test-dav         => { root.cfg-test(); }
+                clear-config     => { root.cfg-clear(); }
+                save-config2     => { root.cfg2-save(); }
+                test-dav2        => { root.cfg2-test(); }
+                clear-config2    => { root.cfg2-clear(); }
+                export-data      => { root.cfg-export(); }
+                import-data      => { root.cfg-import(); }
             }
         }
 
@@ -235,122 +249,61 @@ export component AppWindow inherits Window {
             height: Palette.tab-h;
             background: Palette.bg2;
             border-width: 0px;
-
-            // top border
-            Rectangle {
-                y: 0px; height: 1px;
-                background: Palette.card-border;
-            }
+            Rectangle { y: 0px; height: 1px; background: Palette.card-border; }
 
             HorizontalLayout {
-                // Menu tab
                 tab-menu := Rectangle {
-                    horizontal-stretch: 1;
-                    background: transparent;
+                    horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Menu : Rectangle {
-                        y: 0px; height: 2px;
-                        x: parent.width * 0.2;
-                        width: parent.width * 0.6;
-                        border-radius: 1px;
-                        background: Palette.gold;
+                        y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
+                        border-radius: 1px; background: Palette.gold;
                     }
                     VerticalLayout {
                         alignment: center; spacing: 3px;
-                        Text {
-                            text: "≡"; font-size: 20px;
-                            color: current-tab == Tab.Menu ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
-                        Text {
-                            text: "Menu";
-                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
-                            color: current-tab == Tab.Menu ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
+                        Text { text: "≡"; font-size: 20px; color: current-tab == Tab.Menu ? Palette.gold : Palette.text3; horizontal-alignment: center; }
+                        Text { text: "Menu"; font-size: Palette.fs-xs + 0.5px; font-weight: 500; color: current-tab == Tab.Menu ? Palette.gold : Palette.text3; horizontal-alignment: center; }
                     }
                     TouchArea { clicked => { root.current-tab = Tab.Menu; } }
                 }
 
-                // Stock tab
                 tab-stock := Rectangle {
-                    horizontal-stretch: 1;
-                    background: transparent;
+                    horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Stock : Rectangle {
-                        y: 0px; height: 2px;
-                        x: parent.width * 0.2;
-                        width: parent.width * 0.6;
-                        border-radius: 1px;
-                        background: Palette.gold;
+                        y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
+                        border-radius: 1px; background: Palette.gold;
                     }
                     VerticalLayout {
                         alignment: center; spacing: 3px;
-                        Text {
-                            text: "⬡"; font-size: 20px;
-                            color: current-tab == Tab.Stock ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
-                        Text {
-                            text: "Stock";
-                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
-                            color: current-tab == Tab.Stock ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
+                        Text { text: "⬡"; font-size: 20px; color: current-tab == Tab.Stock ? Palette.gold : Palette.text3; horizontal-alignment: center; }
+                        Text { text: "Stock"; font-size: Palette.fs-xs + 0.5px; font-weight: 500; color: current-tab == Tab.Stock ? Palette.gold : Palette.text3; horizontal-alignment: center; }
                     }
                     TouchArea { clicked => { root.current-tab = Tab.Stock; } }
                 }
 
-                // Courses tab
                 tab-courses := Rectangle {
-                    horizontal-stretch: 1;
-                    background: transparent;
+                    horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Courses : Rectangle {
-                        y: 0px; height: 2px;
-                        x: parent.width * 0.2;
-                        width: parent.width * 0.6;
-                        border-radius: 1px;
-                        background: Palette.gold;
+                        y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
+                        border-radius: 1px; background: Palette.gold;
                     }
                     VerticalLayout {
                         alignment: center; spacing: 3px;
-                        Text {
-                            text: "🛒"; font-size: 20px;
-                            color: current-tab == Tab.Courses ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
-                        Text {
-                            text: root.lang-en ? "Shopping" : "Courses";
-                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
-                            color: current-tab == Tab.Courses ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
+                        Text { text: "🛒"; font-size: 20px; color: current-tab == Tab.Courses ? Palette.gold : Palette.text3; horizontal-alignment: center; }
+                        Text { text: root.lang-en ? "Shopping" : "Courses"; font-size: Palette.fs-xs + 0.5px; font-weight: 500; color: current-tab == Tab.Courses ? Palette.gold : Palette.text3; horizontal-alignment: center; }
                     }
                     TouchArea { clicked => { root.current-tab = Tab.Courses; } }
                 }
 
-                // Config tab
                 tab-cfg := Rectangle {
-                    horizontal-stretch: 1;
-                    background: transparent;
+                    horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Config : Rectangle {
-                        y: 0px; height: 2px;
-                        x: parent.width * 0.2;
-                        width: parent.width * 0.6;
-                        border-radius: 1px;
-                        background: Palette.gold;
+                        y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
+                        border-radius: 1px; background: Palette.gold;
                     }
                     VerticalLayout {
                         alignment: center; spacing: 3px;
-                        Text {
-                            text: "⚙"; font-size: 20px;
-                            color: current-tab == Tab.Config ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
-                        Text {
-                            text: "Config";
-                            font-size: Palette.fs-xs + 0.5px; font-weight: 500;
-                            color: current-tab == Tab.Config ? Palette.gold : Palette.text3;
-                            horizontal-alignment: center;
-                        }
+                        Text { text: "⚙"; font-size: 20px; color: current-tab == Tab.Config ? Palette.gold : Palette.text3; horizontal-alignment: center; }
+                        Text { text: "Config"; font-size: Palette.fs-xs + 0.5px; font-weight: 500; color: current-tab == Tab.Config ? Palette.gold : Palette.text3; horizontal-alignment: center; }
                     }
                     TouchArea { clicked => { root.current-tab = Tab.Config; } }
                 }
@@ -360,22 +313,20 @@ export component AppWindow inherits Window {
 
     // ── Overlays ───────────────────────────────────────────────────────────
     ItemModal {
-        x: 0; y: 0;
-        width: root.width; height: root.height;
+        x: 0; y: 0; width: root.width; height: root.height;
         active <=> root.item-modal-active;
         is-edit: root.item-modal-is-edit;
         lang-en: root.lang-en;
-        field-name <=> root.item-modal-name;
-        field-cat  <=> root.item-modal-cat;
-        field-qty-str  <=> root.item-modal-qty-str;
-        field-obj-str  <=> root.item-modal-obj-str;
+        field-name    <=> root.item-modal-name;
+        field-cat     <=> root.item-modal-cat;
+        field-qty-str <=> root.item-modal-qty-str;
+        field-obj-str <=> root.item-modal-obj-str;
         confirm => { root.item-modal-confirm(); }
         cancel  => { root.item-modal-cancel(); }
     }
 
     ObjModal {
-        x: 0; y: 0;
-        width: root.width; height: root.height;
+        x: 0; y: 0; width: root.width; height: root.height;
         active    <=> root.obj-modal-active;
         item-name:    root.obj-modal-item-name;
         lang-en:      root.lang-en;
@@ -385,8 +336,7 @@ export component AppWindow inherits Window {
     }
 
     QtyModal {
-        x: 0; y: 0;
-        width: root.width; height: root.height;
+        x: 0; y: 0; width: root.width; height: root.height;
         active    <=> root.qty-modal-active;
         item-name:    root.qty-modal-item-name;
         lang-en:      root.lang-en;
@@ -396,8 +346,7 @@ export component AppWindow inherits Window {
     }
 
     CtxMenu {
-        x: 0; y: 0;
-        width: root.width; height: root.height;
+        x: 0; y: 0; width: root.width; height: root.height;
         active       <=> root.ctx-active;
         target-index:    root.ctx-target;
         lang-en:         root.lang-en;
@@ -408,24 +357,22 @@ export component AppWindow inherits Window {
     }
 
     MealModal {
-        x: 0; y: 0;
-        width: root.width; height: root.height;
-        active      <=> root.meal-modal-active;
-        is-edit     <=> root.meal-modal-is-edit;
-        lang-en:        root.lang-en;
-        field-time  <=> root.meal-modal-time;
-        field-label <=> root.meal-modal-label;
+        x: 0; y: 0; width: root.width; height: root.height;
+        active        <=> root.meal-modal-active;
+        is-edit       <=> root.meal-modal-is-edit;
+        lang-en:          root.lang-en;
+        field-time    <=> root.meal-modal-time;
+        field-label   <=> root.meal-modal-label;
         field-content <=> root.meal-modal-content;
-        accent-idx  <=> root.meal-modal-accent-idx;
+        accent-idx    <=> root.meal-modal-accent-idx;
         confirm  => { root.meal-modal-confirm(); }
         cancel   => { root.meal-modal-cancel(); }
         delete(i) => { root.meal-delete(i); }
     }
 
     Toast {
-        x: 0; y: 0;
-        width: root.width; height: root.height;
+        x: 0; y: 0; width: root.width; height: root.height;
         message <=> root.toast-msg;
-        show <=> root.toast-show;
+        show    <=> root.toast-show;
     }
 }

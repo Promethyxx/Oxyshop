@@ -3,7 +3,7 @@ mod storage;
 
 use data::{AppState, CAT_ORDER, cat_icon, cat_color_hex, accent_idx, ACCENT_COLORS};
 use storage::{DavConfig, load_local, save_local, load_config, save_config as save_cfg,
-              clear_config, dav_load, dav_save, dav_test, export_json, import_json};
+              clear_config, dav_load, dav_save, dav_test, dav_test2, export_json, import_json};
 
 use slint::{ModelRc, VecModel, SharedString, Color};
 use std::sync::{Arc, Mutex};
@@ -167,12 +167,12 @@ struct App {
 impl App {
     fn sync_state_int(&self) -> i32 {
         if self.dav_ok { 1 }
-        else if self.config.is_complete() { 2 }
+        else if self.config.is_complete() || self.config.has_dav2() { 2 }
         else { 0 }
     }
     fn sync_label(&self) -> SharedString {
         if self.dav_ok { "☁️ WebDAV".into() }
-        else if self.config.is_complete() {
+        else if self.config.is_complete() || self.config.has_dav2() {
             if self.lang_en { "⚠️ Disconnected".into() } else { "⚠️ Déconnecté".into() }
         }
         else { "💾 Local".into() }
@@ -186,7 +186,7 @@ impl App {
 
     fn save(&mut self) {
         let _ = save_local(&self.state);
-        if self.config.is_complete() {
+        if self.config.is_complete() || self.config.has_dav2() {
             Self::save_bg(self.state.clone(), self.config.clone());
         }
     }
@@ -212,7 +212,7 @@ fn main() { run(); }
 fn run() {
     let config = load_config();
 
-    let (mut state, dav_ok) = if config.is_complete() {
+    let (mut state, dav_ok) = if config.is_complete() || config.has_dav2() {
         match dav_load(&config) {
             Ok(s) => (s, true),
             Err(_) => (load_local().unwrap_or_else(AppState::with_defaults), false),
@@ -262,6 +262,10 @@ fn run() {
         ui.set_cfg_url(st.config.url.clone().into());
         ui.set_cfg_user(st.config.user.clone().into());
         ui.set_cfg_pass(st.config.pass.clone().into());
+        ui.set_cfg2_url(st.config.url2.clone().into());
+        ui.set_cfg2_user(st.config.user2.clone().into());
+        ui.set_cfg2_pass(st.config.pass2.clone().into());
+        ui.set_cfg2_enabled(st.config.dav2_enabled);
 
         ui.set_sync_state(st.sync_state_int());
         ui.set_sync_label(st.sync_label());
@@ -711,13 +715,13 @@ fn run() {
         let toast = toast.clone();
         move || {
             let ui = ui_weak.unwrap();
-            let cfg = DavConfig {
-                url:  ui.get_cfg_url().to_string(),
-                user: ui.get_cfg_user().to_string(),
-                pass: ui.get_cfg_pass().to_string(),
-            };
-            let _ = save_cfg(&cfg);
-            app.lock().unwrap().config = cfg;
+            {
+                let mut st = app.lock().unwrap();
+                st.config.url  = ui.get_cfg_url().to_string();
+                st.config.user = ui.get_cfg_user().to_string();
+                st.config.pass = ui.get_cfg_pass().to_string();
+                let _ = save_cfg(&st.config);
+            }
             let lang = app.lock().unwrap().lang_en;
             toast(if lang { "✅ Config saved" } else { "✅ Config sauvée" });
             rs();
@@ -731,11 +735,14 @@ fn run() {
         let ui_weak = ui.as_weak();
         move || {
             let ui = ui_weak.unwrap();
-            let cfg = DavConfig {
-                url:  ui.get_cfg_url().to_string(),
-                user: ui.get_cfg_user().to_string(),
-                pass: ui.get_cfg_pass().to_string(),
-            };
+            {
+                let mut st = app.lock().unwrap();
+                st.config.url  = ui.get_cfg_url().to_string();
+                st.config.user = ui.get_cfg_user().to_string();
+                st.config.pass = ui.get_cfg_pass().to_string();
+                let _ = save_cfg(&st.config);
+            }
+            let cfg = app.lock().unwrap().config.clone();
             let lang = app.lock().unwrap().lang_en;
             if !cfg.is_complete() { toast(if lang { "⚠️ Fill all 3 fields" } else { "⚠️ Remplis les 3 champs" }); return; }
             let app2 = app.clone();
@@ -792,6 +799,105 @@ fn run() {
             ui.set_cfg_pass("".into());
             let lang = app.lock().unwrap().lang_en;
             toast(if lang { "🗑️ Config cleared" } else { "🗑️ Config effacée" });
+            rs();
+        }
+    });
+
+    // ── Config DAV2 ───────────────────────────────────────────────────────
+
+    ui.on_cfg2_save({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        let rs = refresh_sync.clone();
+        let toast = toast.clone();
+        move || {
+            let ui = ui_weak.unwrap();
+            {
+                let mut st = app.lock().unwrap();
+                st.config.url2         = ui.get_cfg2_url().to_string();
+                st.config.user2        = ui.get_cfg2_user().to_string();
+                st.config.pass2        = ui.get_cfg2_pass().to_string();
+                st.config.dav2_enabled = ui.get_cfg2_enabled();
+                let _ = save_cfg(&st.config);
+            }
+            let lang = app.lock().unwrap().lang_en;
+            toast(if lang { "✅ WebDAV2 saved" } else { "✅ WebDAV2 sauvé" });
+            rs();
+        }
+    });
+
+    ui.on_cfg2_test({
+        let app = app_state.clone();
+        let toast = toast.clone();
+        let ui_weak = ui.as_weak();
+        move || {
+            let ui = ui_weak.unwrap();
+            {
+                let mut st = app.lock().unwrap();
+                st.config.url2         = ui.get_cfg2_url().to_string();
+                st.config.user2        = ui.get_cfg2_user().to_string();
+                st.config.pass2        = ui.get_cfg2_pass().to_string();
+                st.config.dav2_enabled = ui.get_cfg2_enabled();
+                let _ = save_cfg(&st.config);
+            }
+            let cfg = app.lock().unwrap().config.clone();
+            let lang = app.lock().unwrap().lang_en;
+            if !cfg.has_dav2() {
+                toast(if lang { "⚠️ Fill all 3 DAV2 fields and enable" } else { "⚠️ Remplis les 3 champs DAV2 et active" });
+                return;
+            }
+            let ui_weak2 = ui_weak.clone();
+            std::thread::spawn(move || {
+                let result = dav_test2(&cfg);
+                let _ = slint::invoke_from_event_loop(move || {
+                    match result {
+                        Ok(()) => {
+                            if let Some(ui) = ui_weak2.upgrade() {
+                                ui.set_toast_msg(if lang { "✅ DAV2 OK !" } else { "✅ DAV2 OK !" }.into());
+                                ui.set_toast_show(true);
+                                let ui_w = ui_weak2.clone();
+                                slint::Timer::single_shot(std::time::Duration::from_millis(2000), move || {
+                                    if let Some(u) = ui_w.upgrade() { u.set_toast_show(false); }
+                                });
+                            }
+                        }
+                        Err(e) => {
+                            if let Some(ui) = ui_weak2.upgrade() {
+                                ui.set_toast_msg(format!("⚠️ DAV2: {}", e).into());
+                                ui.set_toast_show(true);
+                                let ui_w = ui_weak2.clone();
+                                slint::Timer::single_shot(std::time::Duration::from_millis(3000), move || {
+                                    if let Some(u) = ui_w.upgrade() { u.set_toast_show(false); }
+                                });
+                            }
+                        }
+                    }
+                });
+            });
+        }
+    });
+
+    ui.on_cfg2_clear({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        let rs = refresh_sync.clone();
+        let toast = toast.clone();
+        move || {
+            {
+                let mut st = app.lock().unwrap();
+                st.config.url2         = String::new();
+                st.config.user2        = String::new();
+                st.config.pass2        = String::new();
+                st.config.dav2_enabled = false;
+                let _ = save_cfg(&st.config);
+            }
+            let ui = ui_weak.unwrap();
+            ui.set_cfg2_url("".into());
+            ui.set_cfg2_user("".into());
+            ui.set_cfg2_pass("".into());
+            ui.set_cfg2_enabled(false);
+            let lang = app.lock().unwrap().lang_en;
+            toast(if lang { "🗑️ DAV2 cleared" } else { "🗑️ DAV2 effacé" });
             rs();
         }
     });
