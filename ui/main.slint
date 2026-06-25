@@ -97,6 +97,16 @@ export component AppWindow inherits Window {
     callback cfg2-test;
     callback cfg2-clear;
 
+    // ── Backup ─────────────────────────────────────────────────────────────
+    in-out property <bool>   cfg-backup-local:       true;
+    in-out property <bool>   cfg-backup-webdav:      true;
+    in-out property <string> cfg-data-dir-edit:      "";
+    in property <string>     cfg-data-dir-display:   "";
+    in property <string>     cfg-backup-dir-display: "";
+    callback cfg-set-backup-local(bool);
+    callback cfg-set-backup-webdav(bool);
+    callback cfg-set-data-dir(string);
+
     // ── Export / Import ────────────────────────────────────────────────────
     callback cfg-export;
     callback cfg-import;
@@ -233,6 +243,11 @@ export component AppWindow inherits Window {
                 dav2-pass    <=> root.cfg2-pass;
                 dav2-enabled <=> root.cfg2-enabled;
                 lang-en:         root.lang-en;
+                backup-local     <=> root.cfg-backup-local;
+                backup-webdav    <=> root.cfg-backup-webdav;
+                data-dir-edit    <=> root.cfg-data-dir-edit;
+                data-dir-display:    root.cfg-data-dir-display;
+                backup-dir-display:  root.cfg-backup-dir-display;
                 save-config      => { root.cfg-save(); }
                 test-dav         => { root.cfg-test(); }
                 clear-config     => { root.cfg-clear(); }
@@ -241,6 +256,9 @@ export component AppWindow inherits Window {
                 clear-config2    => { root.cfg2-clear(); }
                 export-data      => { root.cfg-export(); }
                 import-data      => { root.cfg-import(); }
+                set-backup-local(v)  => { root.cfg-set-backup-local(v); }
+                set-backup-webdav(v) => { root.cfg-set-backup-webdav(v); }
+                set-data-dir(p)      => { root.cfg-set-data-dir(p); }
             }
         }
 

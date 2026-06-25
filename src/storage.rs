@@ -1,5 +1,6 @@
 use crate::data::AppState;
 use std::path::PathBuf;
+use chrono;
 
 #[cfg(target_os = "android")]
 static ANDROID_DATA_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
@@ -24,12 +25,47 @@ fn local_dir() -> PathBuf {
         .join("oxyshop")
 }
 
-fn data_path() -> PathBuf {
-    local_dir().join("oxyshop.json")
+// ── Paths ─────────────────────────────────────────────────────────────────────
+
+/// Dossier racine des données. Sur desktop : oxyshop_config/ à côté de l'exe
+/// sauf si data_dir est renseigné.
+fn base_dir(cfg: &DavConfig) -> PathBuf {
+    #[cfg(target_os = "android")]
+    {
+        if let Some(p) = ANDROID_DATA_DIR.get() { return p.clone(); }
+        return PathBuf::from(".");
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        if !cfg.data_dir.trim().is_empty() {
+            return PathBuf::from(cfg.data_dir.trim());
+        }
+        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
+        exe.parent().unwrap_or(std::path::Path::new("."))
+            .join("oxyshop_config")
+    }
+}
+
+fn backup_dir(cfg: &DavConfig) -> PathBuf {
+    base_dir(cfg).join("backup")
+}
+
+fn data_path(cfg: &DavConfig) -> PathBuf {
+    base_dir(cfg).join("oxyshop.json")
 }
 
 fn config_path() -> PathBuf {
-    local_dir().join("config.json")
+    #[cfg(target_os = "android")]
+    {
+        local_dir().join("config.json")
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        let exe = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("."));
+        exe.parent().unwrap_or(std::path::Path::new("."))
+            .join("oxyshop_config")
+            .join("config.json")
+    }
 }
 
 fn marker_filename() -> &'static str {
@@ -38,14 +74,15 @@ fn marker_filename() -> &'static str {
 
 // ── Local JSON ────────────────────────────────────────────────────────────────
 
-pub fn load_local() -> Option<AppState> {
-    let path = data_path();
+pub fn load_local(cfg: &DavConfig) -> Option<AppState> {
+    let path = data_path(cfg);
     let text = std::fs::read_to_string(&path).ok()?;
     serde_json::from_str(&text).ok()
 }
 
-pub fn save_local(state: &AppState) -> std::io::Result<()> {
-    let path = data_path();
+pub fn save_local(cfg: &DavConfig, state: &AppState) -> std::io::Result<()> {
+    if !cfg.backup_local { return Ok(()); }
+    let path = data_path(cfg);
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
@@ -56,21 +93,34 @@ pub fn save_local(state: &AppState) -> std::io::Result<()> {
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Default)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DavConfig {
-    pub url:  String,
-    pub user: String,
-    pub pass: String,
-    // WebDAV secondaire (optionnel)
-    #[serde(default)]
-    pub url2:     String,
-    #[serde(default)]
-    pub user2:    String,
-    #[serde(default)]
-    pub pass2:    String,
-    #[serde(default)]
-    pub dav2_enabled: bool,
+    #[serde(default)] pub url:          String,
+    #[serde(default)] pub user:         String,
+    #[serde(default)] pub pass:         String,
+    #[serde(default)] pub url2:         String,
+    #[serde(default)] pub user2:        String,
+    #[serde(default)] pub pass2:        String,
+    #[serde(default)] pub dav2_enabled: bool,
+    #[serde(default)] pub data_dir:     String,
+    #[serde(default = "default_true")] pub backup_local:  bool,
+    #[serde(default = "default_true")] pub backup_webdav: bool,
 }
+
+impl Default for DavConfig {
+    fn default() -> Self {
+        Self {
+            url: String::new(), user: String::new(), pass: String::new(),
+            url2: String::new(), user2: String::new(), pass2: String::new(),
+            dav2_enabled: false,
+            data_dir: String::new(),
+            backup_local: true,
+            backup_webdav: true,
+        }
+    }
+}
+
+fn default_true() -> bool { true }
 
 impl DavConfig {
     pub fn is_complete(&self) -> bool {
@@ -103,6 +153,28 @@ impl DavConfig {
         let base = if self.url2.ends_with('/') { self.url2.clone() } else { format!("{}/", self.url2) };
         format!("{}{}", base, marker_filename())
     }
+
+    pub fn backup_url(&self, ts: &str) -> String {
+        let base = if self.url.ends_with('/') { self.url.clone() } else { format!("{}/", self.url) };
+        format!("{}backup/oxyshop_{}.json", base, ts)
+    }
+
+    pub fn backup_url2(&self, ts: &str) -> String {
+        let base = if self.url2.ends_with('/') { self.url2.clone() } else { format!("{}/", self.url2) };
+        format!("{}backup/oxyshop_{}.json", base, ts)
+    }
+
+    pub fn data_dir_display(&self) -> String {
+        if self.data_dir.trim().is_empty() {
+            base_dir(self).to_string_lossy().to_string()
+        } else {
+            self.data_dir.clone()
+        }
+    }
+
+    pub fn backup_dir_display(&self) -> String {
+        backup_dir(self).to_string_lossy().to_string()
+    }
 }
 
 pub fn load_config() -> DavConfig {
@@ -126,6 +198,70 @@ pub fn save_config(cfg: &DavConfig) -> std::io::Result<()> {
 pub fn clear_config() -> std::io::Result<()> {
     let _ = std::fs::remove_file(config_path());
     Ok(())
+}
+
+// ── Backup ────────────────────────────────────────────────────────────────────
+
+fn ts_filename() -> String {
+    chrono::Local::now().format("%Y-%m-%d_%H%M%S").to_string()
+}
+
+/// Backup local avec rotation 30 fichiers max.
+pub fn backup_local_fn(cfg: &DavConfig, state: &AppState) {
+    if !cfg.backup_local { return; }
+    let dir = backup_dir(cfg);
+    let _ = std::fs::create_dir_all(&dir);
+    let ts = ts_filename();
+    let fname = format!("oxyshop_{}.json", ts);
+    let text = match serde_json::to_string_pretty(state) {
+        Ok(t) => t, Err(_) => return,
+    };
+    let _ = std::fs::write(dir.join(&fname), &text);
+    // Purge : garde les 30 plus récents
+    if let Ok(entries) = std::fs::read_dir(&dir) {
+        let mut files: Vec<PathBuf> = entries
+            .flatten()
+            .filter(|e| e.file_name().to_string_lossy().starts_with("oxyshop_"))
+            .map(|e| e.path())
+            .collect();
+        files.sort();
+        if files.len() > 30 {
+            for old in &files[..files.len() - 30] {
+                let _ = std::fs::remove_file(old);
+            }
+        }
+    }
+}
+
+fn backup_dav_upload(client: &reqwest::blocking::Client, url: &str, user: &str, pass: &str, body: &str) {
+    let _ = client
+        .put(url)
+        .basic_auth(user, Some(pass))
+        .header("Content-Type", "application/json")
+        .body(body.to_string())
+        .send();
+}
+
+/// Backup complet à la fermeture (local + WebDAV).
+pub fn backup_on_exit(cfg: &DavConfig, state: &AppState) {
+    backup_local_fn(cfg, state);
+    if cfg.backup_webdav && (cfg.is_complete() || cfg.has_dav2()) {
+        let cfg2 = cfg.clone();
+        let body = match serde_json::to_string_pretty(state) {
+            Ok(t) => t, Err(_) => return,
+        };
+        std::thread::spawn(move || {
+            let ts = ts_filename();
+            if let Ok(client) = make_client() {
+                if cfg2.is_complete() {
+                    backup_dav_upload(&client, &cfg2.backup_url(&ts), &cfg2.user, &cfg2.pass, &body);
+                }
+                if cfg2.has_dav2() {
+                    backup_dav_upload(&client, &cfg2.backup_url2(&ts), &cfg2.user2, &cfg2.pass2, &body);
+                }
+            }
+        });
+    }
 }
 
 // ── HTTP client ───────────────────────────────────────────────────────────────
@@ -166,10 +302,7 @@ fn read_marker(client: &reqwest::blocking::Client, url: &str, user: &str, pass: 
         Ok(r) if r.status().is_success() => r,
         _ => return 0,
     };
-    let text = match resp.text() {
-        Ok(t) => t,
-        Err(_) => return 0,
-    };
+    let text = match resp.text() { Ok(t) => t, Err(_) => return 0 };
     serde_json::from_str::<serde_json::Value>(&text)
         .ok()
         .and_then(|v| v["ts"].as_u64())
@@ -178,25 +311,20 @@ fn read_marker(client: &reqwest::blocking::Client, url: &str, user: &str, pass: 
 
 fn write_marker(client: &reqwest::blocking::Client, url: &str, user: &str, pass: &str, ts: u64) {
     let body = format!("{{\"ts\":{},\"app\":\"Oxyshop\"}}", ts);
-    let _ = client
-        .put(url)
-        .basic_auth(user, Some(pass))
+    let _ = client.put(url).basic_auth(user, Some(pass))
         .header("Content-Type", "application/json")
-        .body(body)
-        .send();
+        .body(body).send();
 }
 
-// ── WebDAV (blocking — must be called from a background thread) ───────────────
+// ── WebDAV ────────────────────────────────────────────────────────────────────
 
 pub fn dav_load(cfg: &DavConfig) -> Result<AppState, String> {
     let client = make_client()?;
 
-    // Lire les marqueurs pour choisir la source la plus récente
     let ts1 = if cfg.is_complete() { read_marker(&client, &cfg.marker_url(), &cfg.user, &cfg.pass) } else { 0 };
     let ts2 = if cfg.has_dav2()    { read_marker(&client, &cfg.marker_url2(), &cfg.user2, &cfg.pass2) } else { 0 };
 
-    // Ordonner : source la plus récente en premier, stocker des String owned
-    let sources_owned: Vec<(String, String, String)> = if ts2 > ts1 && cfg.has_dav2() {
+    let sources: Vec<(String, String, String)> = if ts2 > ts1 && cfg.has_dav2() {
         let mut v = vec![];
         if cfg.has_dav2()    { v.push((cfg.file_url2(), cfg.user2.clone(), cfg.pass2.clone())); }
         if cfg.is_complete() { v.push((cfg.file_url(),  cfg.user.clone(),  cfg.pass.clone())); }
@@ -209,15 +337,11 @@ pub fn dav_load(cfg: &DavConfig) -> Result<AppState, String> {
     };
 
     let mut last_err = String::from("no source configured");
-    for (url, user, pass) in &sources_owned {
+    for (url, user, pass) in &sources {
         let resp = match client.get(url).basic_auth(user, Some(pass)).send() {
-            Ok(r) => r,
-            Err(e) => { last_err = e.to_string(); continue; }
+            Ok(r) => r, Err(e) => { last_err = e.to_string(); continue; }
         };
-        if !resp.status().is_success() {
-            last_err = format!("HTTP {}", resp.status());
-            continue;
-        }
+        if !resp.status().is_success() { last_err = format!("HTTP {}", resp.status()); continue; }
         match resp.json::<AppState>() {
             Ok(state) => return Ok(state),
             Err(e) => { last_err = e.to_string(); continue; }
@@ -232,36 +356,30 @@ pub fn dav_save(cfg: &DavConfig, state: &AppState) -> Result<(), String> {
     let ts = now_ts();
     let mut last_err = String::new();
 
-    // Push DAV1
     if cfg.is_complete() {
-        let resp = client
-            .put(&cfg.file_url())
+        let resp = client.put(&cfg.file_url())
             .basic_auth(&cfg.user, Some(&cfg.pass))
             .header("Content-Type", "application/json")
-            .body(body.clone())
-            .send()
+            .body(body.clone()).send()
             .map_err(|e| e.to_string())?;
         let status = resp.status().as_u16();
-        if status == 200 || status == 201 || status == 204 {
+        if matches!(status, 200 | 201 | 204) {
             write_marker(&client, &cfg.marker_url(), &cfg.user, &cfg.pass, ts);
         } else {
             last_err = format!("DAV1 HTTP {}", status);
         }
     }
 
-    // Push DAV2
     if cfg.has_dav2() {
-        let resp = client
-            .put(&cfg.file_url2())
+        match client.put(&cfg.file_url2())
             .basic_auth(&cfg.user2, Some(&cfg.pass2))
             .header("Content-Type", "application/json")
-            .body(body.clone())
-            .send();
-        match resp {
-            Ok(r) if r.status().as_u16() == 200 || r.status().as_u16() == 201 || r.status().as_u16() == 204 => {
+            .body(body.clone()).send()
+        {
+            Ok(r) if matches!(r.status().as_u16(), 200 | 201 | 204) => {
                 write_marker(&client, &cfg.marker_url2(), &cfg.user2, &cfg.pass2, ts);
             }
-            Ok(r) => { last_err = format!("DAV2 HTTP {}", r.status()); }
+            Ok(r)  => { last_err = format!("DAV2 HTTP {}", r.status()); }
             Err(e) => { last_err = format!("DAV2 {}", e); }
         }
     }
@@ -271,50 +389,37 @@ pub fn dav_save(cfg: &DavConfig, state: &AppState) -> Result<(), String> {
 
 pub fn dav_test(cfg: &DavConfig) -> Result<(), String> {
     let client = make_client()?;
-    let resp = client
-        .head(&cfg.file_url())
+    let resp = client.head(&cfg.file_url())
         .basic_auth(&cfg.user, Some(&cfg.pass))
-        .send()
-        .map_err(|e| e.to_string())?;
-    let status = resp.status().as_u16();
-    if status < 500 { Ok(()) } else { Err(format!("HTTP {}", status)) }
+        .send().map_err(|e| e.to_string())?;
+    let s = resp.status().as_u16();
+    if s < 500 { Ok(()) } else { Err(format!("HTTP {}", s)) }
 }
 
 pub fn dav_test2(cfg: &DavConfig) -> Result<(), String> {
-    if !cfg.has_dav2() {
-        return Err("WebDAV2 non configuré".into());
-    }
+    if !cfg.has_dav2() { return Err("WebDAV2 non configuré".into()); }
     let client = make_client()?;
-    let resp = client
-        .head(&cfg.file_url2())
+    let resp = client.head(&cfg.file_url2())
         .basic_auth(&cfg.user2, Some(&cfg.pass2))
-        .send()
-        .map_err(|e| e.to_string())?;
-    let status = resp.status().as_u16();
-    if status < 500 { Ok(()) } else { Err(format!("HTTP {}", status)) }
+        .send().map_err(|e| e.to_string())?;
+    let s = resp.status().as_u16();
+    if s < 500 { Ok(()) } else { Err(format!("HTTP {}", s)) }
 }
 
 // ── Export / Import ───────────────────────────────────────────────────────────
 
-pub fn export_json(state: &AppState) -> Result<PathBuf, String> {
-    // Nom aligné sur le fichier WebDAV pour compatibilité directe
-    let filename = "oxyshop.json".to_string();
+pub fn export_json(_cfg: &DavConfig, state: &AppState) -> Result<PathBuf, String> {
     let dest = {
         #[cfg(target_os = "android")]
-        {
-            local_dir().join(&filename)
-        }
+        { local_dir().join("oxyshop.json") }
         #[cfg(not(target_os = "android"))]
         {
-            dirs::download_dir()
-                .or_else(dirs::home_dir)
+            dirs::download_dir().or_else(dirs::home_dir)
                 .unwrap_or_else(|| PathBuf::from("."))
-                .join(&filename)
+                .join("oxyshop.json")
         }
     };
-    if let Some(parent) = dest.parent() {
-        let _ = std::fs::create_dir_all(parent);
-    }
+    if let Some(parent) = dest.parent() { let _ = std::fs::create_dir_all(parent); }
     let text = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
     std::fs::write(&dest, text).map_err(|e| e.to_string())?;
     Ok(dest)

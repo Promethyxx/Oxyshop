@@ -13,6 +13,12 @@ export component ConfigView inherits Rectangle {
     in-out property <string> dav2-pass;
     in-out property <bool>   dav2-enabled: false;
     in property <bool> lang-en;
+    // Backup
+    in-out property <bool>   backup-local:        true;
+    in-out property <bool>   backup-webdav:       true;
+    in-out property <string> data-dir-edit:       "";
+    in property <string>     data-dir-display:    "";
+    in property <string>     backup-dir-display:  "";
 
     callback save-config;
     callback test-dav;
@@ -25,6 +31,9 @@ export component ConfigView inherits Rectangle {
     callback theme-toggle;
     callback font-smaller;
     callback font-larger;
+    callback set-backup-local(bool);
+    callback set-backup-webdav(bool);
+    callback set-data-dir(string);
 
     VerticalLayout {
         padding: 20px; spacing: 0px;
@@ -273,6 +282,107 @@ export component ConfigView inherits Rectangle {
                             ActionBtn { label: lang-en ? "Save" : "Sauver";   primary: true;  small: true; width: 80px;  clicked => { root.save-config2(); } }
                             ActionBtn { label: lang-en ? "Test" : "Tester";   primary: false; small: true; width: 80px;  clicked => { root.test-dav2(); } }
                             ActionBtn { label: lang-en ? "Clear" : "Effacer"; primary: false; small: true; width: 80px;  clicked => { root.clear-config2(); } }
+                        }
+                    }
+                }
+
+                // ── Backup ───────────────────────────────────────────────────
+                Rectangle {
+                    border-radius: 12px;
+                    border-width: 1px;
+                    border-color: Palette.card-border;
+                    background: Palette.card;
+
+                    VerticalLayout {
+                        padding: 14px; spacing: 10px;
+
+                        Text {
+                            text: lang-en ? "💾  BACKUP" : "💾  BACKUP";
+                            font-size: Palette.fs-xs + 0.5px; font-weight: 600;
+                            color: Palette.text3; letter-spacing: 1px;
+                        }
+
+                        // Toggle backup local
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Text {
+                                text: lang-en ? "Local backup" : "Backup local";
+                                font-size: Palette.fs - 0.5px; color: Palette.text;
+                                vertical-alignment: center; horizontal-stretch: 1;
+                            }
+                            Rectangle {
+                                width: 50px; height: 26px; border-radius: 13px;
+                                background: backup-local ? Palette.gold : Palette.card-border;
+                                animate background { duration: 150ms; }
+                                TouchArea { clicked => { root.backup-local = !root.backup-local; root.set-backup-local(root.backup-local); } }
+                                Rectangle {
+                                    width: 20px; height: 20px; border-radius: 10px; background: white;
+                                    x: backup-local ? parent.width - self.width - 3px : 3px;
+                                    y: (parent.height - self.height) / 2;
+                                    animate x { duration: 150ms; }
+                                }
+                            }
+                        }
+
+                        // Toggle backup webdav
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Text {
+                                text: lang-en ? "WebDAV backup" : "Backup WebDAV";
+                                font-size: Palette.fs - 0.5px; color: Palette.text;
+                                vertical-alignment: center; horizontal-stretch: 1;
+                            }
+                            Rectangle {
+                                width: 50px; height: 26px; border-radius: 13px;
+                                background: backup-webdav ? Palette.gold : Palette.card-border;
+                                animate background { duration: 150ms; }
+                                TouchArea { clicked => { root.backup-webdav = !root.backup-webdav; root.set-backup-webdav(root.backup-webdav); } }
+                                Rectangle {
+                                    width: 20px; height: 20px; border-radius: 10px; background: white;
+                                    x: backup-webdav ? parent.width - self.width - 3px : 3px;
+                                    y: (parent.height - self.height) / 2;
+                                    animate x { duration: 150ms; }
+                                }
+                            }
+                        }
+
+                        // Dossier de données
+                        VerticalLayout {
+                            spacing: 3px;
+                            Text {
+                                text: lang-en ? "Data folder" : "Dossier de données";
+                                font-size: Palette.fs-md - 0.5px; color: Palette.text2;
+                            }
+                            HorizontalLayout {
+                                spacing: 6px; height: 36px;
+                                Rectangle {
+                                    horizontal-stretch: 1; height: 36px;
+                                    border-radius: 8px; border-width: 1px;
+                                    border-color: dir-ti.has-focus ? rgba(232,168,124,0.3) : Palette.card-border;
+                                    background: Palette.card; clip: true;
+                                    dir-ti := TextInput {
+                                        x: 8px; y: 0px;
+                                        width: parent.width - 16px; height: parent.height;
+                                        text <=> root.data-dir-edit;
+                                        font-size: Palette.fs - 2px; color: Palette.text;
+                                        horizontal-alignment: left; vertical-alignment: center;
+                                    }
+                                    if dir-ti.text == "" && !dir-ti.has-focus : Text {
+                                        x: 8px; y: (parent.height - self.preferred-height) / 2;
+                                        text: data-dir-display;
+                                        font-size: Palette.fs - 2px; color: Palette.text3;
+                                    }
+                                }
+                                ActionBtn {
+                                    label: lang-en ? "Save" : "Sauver";
+                                    primary: true; small: true; width: 70px;
+                                    clicked => { root.set-data-dir(dir-ti.text); }
+                                }
+                            }
+                            Text {
+                                text: (lang-en ? "Backups → " : "Backups → ") + backup-dir-display;
+                                font-size: Palette.fs-xs; color: Palette.text3; wrap: word-wrap;
+                            }
                         }
                     }
                 }

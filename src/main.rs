@@ -3,7 +3,8 @@ mod storage;
 
 use data::{AppState, CAT_ORDER, cat_icon, cat_color_hex, accent_idx, ACCENT_COLORS};
 use storage::{DavConfig, load_local, save_local, load_config, save_config as save_cfg,
-              clear_config, dav_load, dav_save, dav_test, dav_test2, export_json, import_json};
+              clear_config, dav_load, dav_save, dav_test, dav_test2, export_json, import_json,
+              backup_on_exit};
 
 use slint::{ModelRc, VecModel, SharedString, Color};
 use std::sync::{Arc, Mutex};
@@ -185,7 +186,7 @@ impl App {
     }
 
     fn save(&mut self) {
-        let _ = save_local(&self.state);
+        let _ = save_local(&self.config, &self.state);
         if self.config.is_complete() || self.config.has_dav2() {
             Self::save_bg(self.state.clone(), self.config.clone());
         }
@@ -215,10 +216,10 @@ fn run() {
     let (mut state, dav_ok) = if config.is_complete() || config.has_dav2() {
         match dav_load(&config) {
             Ok(s) => (s, true),
-            Err(_) => (load_local().unwrap_or_else(AppState::with_defaults), false),
+            Err(_) => (load_local(&config).unwrap_or_else(AppState::with_defaults), false),
         }
     } else {
-        (load_local().unwrap_or_else(AppState::with_defaults), false)
+        (load_local(&config).unwrap_or_else(AppState::with_defaults), false)
     };
     if state.meals.is_empty() { state.meals = data::default_meals(); }
 
@@ -266,6 +267,12 @@ fn run() {
         ui.set_cfg2_user(st.config.user2.clone().into());
         ui.set_cfg2_pass(st.config.pass2.clone().into());
         ui.set_cfg2_enabled(st.config.dav2_enabled);
+
+        ui.set_cfg_backup_local(st.config.backup_local);
+        ui.set_cfg_backup_webdav(st.config.backup_webdav);
+        ui.set_cfg_data_dir_display(st.config.data_dir_display().into());
+        ui.set_cfg_backup_dir_display(st.config.backup_dir_display().into());
+        ui.set_cfg_data_dir_edit(st.config.data_dir.clone().into());
 
         ui.set_sync_state(st.sync_state_int());
         ui.set_sync_label(st.sync_label());
@@ -393,7 +400,7 @@ fn run() {
         move || {
             let st = app.lock().unwrap();
             let lang = st.lang_en;
-            match export_json(&st.state) {
+            match export_json(&st.config, &st.state) {
                 Ok(path) => toast(&format!("📤 {} : {}", if lang { "Exported" } else { "Exporté" }, path.file_name().unwrap_or_default().to_string_lossy())),
                 Err(e) => toast(&format!("⚠️ {}", e)),
             }
@@ -908,7 +915,7 @@ fn run() {
         move || {
             let st = app.lock().unwrap();
             let lang = st.lang_en;
-            match export_json(&st.state) {
+            match export_json(&st.config, &st.state) {
                 Ok(p) => toast(&format!("📤 {} : {}", if lang { "Exported" } else { "Exporté" }, p.file_name().unwrap_or_default().to_string_lossy())),
                 Err(e) => toast(&format!("⚠️ {}", e)),
             }
@@ -1064,6 +1071,60 @@ fn run() {
                 toast(&msg);
                 rm();
             }
+        }
+    });
+
+    // ── Backup callbacks ──────────────────────────────────────────────────
+
+    ui.on_cfg_set_backup_local({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        move |val| {
+            let mut st = app.lock().unwrap();
+            st.config.backup_local = val;
+            let _ = save_cfg(&st.config);
+            ui_weak.unwrap().set_cfg_backup_local(val);
+        }
+    });
+
+    ui.on_cfg_set_backup_webdav({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        move |val| {
+            let mut st = app.lock().unwrap();
+            st.config.backup_webdav = val;
+            let _ = save_cfg(&st.config);
+            ui_weak.unwrap().set_cfg_backup_webdav(val);
+        }
+    });
+
+    ui.on_cfg_set_data_dir({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        let toast = toast.clone();
+        move |path| {
+            let mut st = app.lock().unwrap();
+            st.config.data_dir = path.to_string();
+            let _ = save_cfg(&st.config);
+            let display = st.config.data_dir_display();
+            let backup_display = st.config.backup_dir_display();
+            let lang = st.lang_en;
+            drop(st);
+            let ui = ui_weak.unwrap();
+            ui.set_cfg_data_dir_display(display.into());
+            ui.set_cfg_backup_dir_display(backup_display.into());
+            toast(if lang { "📁 Folder saved" } else { "📁 Dossier sauvegardé" });
+        }
+    });
+
+    // ── Backup à la fermeture ─────────────────────────────────────────────
+
+    ui.window().on_close_requested({
+        let app = app_state.clone();
+        move || {
+            let st = app.lock().unwrap();
+            backup_on_exit(&st.config, &st.state);
+            slint::CloseRequestResponse::HideWindow
         }
     });
 
