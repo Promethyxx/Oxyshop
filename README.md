@@ -37,6 +37,8 @@ This project is licensed under the GNU General Public License v3.0 — see Licen
 ---
 ## Roadmap
 ## 🔴 NOW
+ - Security audit and quality control
+ - Webdav and autosave fix
 ## 🟡 NEXT
  - ### Release:
     - Chocolatey
