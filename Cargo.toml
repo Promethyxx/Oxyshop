@@ -1,6 +1,6 @@
 [package]
 name = "Oxyshop"
-version = "0.9.1"
+version = "0.8.1"
 edition = "2024"
 
 [features]
@@ -13,7 +13,7 @@ required-features = ["desktop"]
 
 [lib]
 crate-type = ["cdylib"]
-name = "Oxyshop_And"
+name = "Oxyshop"
 path = "src/lib.rs"
 
 [dependencies]
