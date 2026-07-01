@@ -156,17 +156,21 @@ export component Toast inherits Rectangle {
     z: 300;
 
     pill := Rectangle {
-        height: 38px;
-        width: min(txt.preferred-width + 40px, root.width - 32px);
+        width: min(root.width - 32px, 420px);
+        height: txt.preferred-height + 20px;
         x: (root.width - self.width) / 2;
-        y: root.show ? 16px : -60px;
+        y: root.show ? 16px : -(self.height + 20px);
         border-radius: 10px;
         background: Palette.green;
         drop-shadow-blur: 12px;
         drop-shadow-color: rgba(0,0,0,0.3);
+        clip: true;
 
         txt := Text {
+            x: 12px; y: 10px;
+            width: parent.width - 24px;
             text: root.message;
+            wrap: word-wrap;
             font-size: Palette.fs - 0.5px; font-weight: 500;
             color: #1a1a1a;
             horizontal-alignment: center;

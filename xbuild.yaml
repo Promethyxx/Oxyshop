@@ -1,9 +1,14 @@
 # Config lue par xbuild (remplace [package.metadata.android] utilisé par cargo-apk,
 # que xbuild ignore totalement). Placé à la racine du projet, à côté de Cargo.toml.
 #
-# Référence (code source, pas de doc officielle complète) :
-# https://github.com/rust-mobile/xbuild/blob/master/xbuild/src/config.rs
+# Référence : exemple officiel vérifié (workflow xbuild+Bevy fonctionnel) :
+# https://www.nikl.me/blog/2023/github_workflow_to_publish_android_app/
 android:
+  # icon: chemin vers UN SEUL fichier image source (pas "@mipmap/...") —
+  # xbuild génère lui-même les variantes de résolution (mdpi/hdpi/xxhdpi/...).
+  # 512x512 est la résolution recommandée par Google pour une icône source,
+  # pas besoin de fournir plusieurs tailles.
+  icon: "assets/Oxyshop_icon.png"
   manifest:
     package: io.github.promethyxx.oxyshop
     sdk:
@@ -11,8 +16,5 @@ android:
       target_sdk_version: 37
     application:
       label: Oxyshop
-      icon: "@mipmap/ic_launcher"
       uses_permission:
         - name: android.permission.INTERNET
-  assets:
-    - assets/res

@@ -394,12 +394,12 @@ pub fn dav_load(cfg: &DavConfig) -> Result<AppState, String> {
     let mut last_err = String::from("aucune source WebDAV valide configurée");
     for (url, user, pass) in &sources {
         let resp = match client.get(url).basic_auth(user, Some(pass)).send() {
-            Ok(r) => r, Err(e) => { last_err = e.to_string(); continue; }
+            Ok(r) => r, Err(e) => { last_err = format!("{} — {}", url, e); continue; }
         };
-        if !resp.status().is_success() { last_err = format!("HTTP {}", resp.status()); continue; }
+        if !resp.status().is_success() { last_err = format!("{} — HTTP {}", url, resp.status()); continue; }
         match resp.json::<AppState>() {
             Ok(state) => return Ok(state),
-            Err(e) => { last_err = e.to_string(); continue; }
+            Err(e) => { last_err = format!("{} — {}", url, e); continue; }
         }
     }
     Err(last_err)
@@ -418,15 +418,15 @@ pub fn dav_save(cfg: &DavConfig, state: &AppState) -> Result<(), String> {
                     .basic_auth(&cfg.user, Some(&cfg.pass))
                     .header("Content-Type", "application/json")
                     .body(body.clone()).send()
-                    .map_err(|e| e.to_string())?;
+                    .map_err(|e| format!("{} — {}", cfg.file_url(), e))?;
                 let status = resp.status().as_u16();
                 if matches!(status, 200 | 201 | 204) {
                     write_marker(&client, &cfg.marker_url(), &cfg.user, &cfg.pass, ts);
                 } else {
-                    last_err = format!("DAV1 HTTP {}", status);
+                    last_err = format!("{} — HTTP {}", cfg.file_url(), status);
                 }
             }
-            Err(e) => last_err = format!("DAV1 {}", e),
+            Err(e) => last_err = format!("{} — {}", cfg.url, e),
         }
     }
 
@@ -440,10 +440,10 @@ pub fn dav_save(cfg: &DavConfig, state: &AppState) -> Result<(), String> {
                 Ok(r) if matches!(r.status().as_u16(), 200 | 201 | 204) => {
                     write_marker(&client, &cfg.marker_url2(), &cfg.user2, &cfg.pass2, ts);
                 }
-                Ok(r)  => { last_err = format!("DAV2 HTTP {}", r.status()); }
-                Err(e) => { last_err = format!("DAV2 {}", e); }
+                Ok(r)  => { last_err = format!("{} — HTTP {}", cfg.file_url2(), r.status()); }
+                Err(e) => { last_err = format!("{} — {}", cfg.file_url2(), e); }
             },
-            Err(e) => last_err = format!("DAV2 {}", e),
+            Err(e) => last_err = format!("{} — {}", cfg.url2, e),
         }
     }
 
@@ -455,9 +455,9 @@ pub fn dav_test(cfg: &DavConfig) -> Result<(), String> {
     let client = make_client()?;
     let resp = client.head(&cfg.file_url())
         .basic_auth(&cfg.user, Some(&cfg.pass))
-        .send().map_err(|e| e.to_string())?;
+        .send().map_err(|e| format!("{} — {}", cfg.file_url(), e))?;
     let s = resp.status().as_u16();
-    if s < 500 { Ok(()) } else { Err(format!("HTTP {}", s)) }
+    if s < 500 { Ok(()) } else { Err(format!("{} — HTTP {}", cfg.file_url(), s)) }
 }
 
 pub fn dav_test2(cfg: &DavConfig) -> Result<(), String> {
@@ -466,9 +466,9 @@ pub fn dav_test2(cfg: &DavConfig) -> Result<(), String> {
     let client = make_client()?;
     let resp = client.head(&cfg.file_url2())
         .basic_auth(&cfg.user2, Some(&cfg.pass2))
-        .send().map_err(|e| e.to_string())?;
+        .send().map_err(|e| format!("{} — {}", cfg.file_url2(), e))?;
     let s = resp.status().as_u16();
-    if s < 500 { Ok(()) } else { Err(format!("HTTP {}", s)) }
+    if s < 500 { Ok(()) } else { Err(format!("{} — HTTP {}", cfg.file_url2(), s)) }
 }
 
 // ── Export / Import ───────────────────────────────────────────────────────────
