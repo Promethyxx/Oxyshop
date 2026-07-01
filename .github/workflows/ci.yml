@@ -4,7 +4,7 @@ on:
 permissions:
   contents: write
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE26: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 jobs:
   build:
     strategy:
@@ -25,13 +25,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     name: Build ${{ matrix.label }}
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: ${{ matrix.target }}
     - name: Cache Cargo
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cargo/registry
@@ -58,7 +58,7 @@ jobs:
         cp target/${{ matrix.target }}/release/Oxyshop ${{ matrix.artifact_name }}
         chmod +x ${{ matrix.artifact_name }}
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: binary-${{ matrix.label }}
         path: ${{ matrix.artifact_name }}
@@ -66,13 +66,13 @@ jobs:
     runs-on: ubuntu-latest
     name: Build Android APK
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: aarch64-linux-android
     - name: Cache Cargo
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cargo/registry
@@ -81,16 +81,18 @@ jobs:
         key: android-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: android-cargo-
     - name: Setup Java
-      uses: actions/setup-java@v4
+      uses: actions/setup-java@v5
       with:
         distribution: temurin
-        java-version: 17
+        java-version: 21
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
+    - name: Install Android platform 37
+      run: sdkmanager "platforms;android-37"
     - name: Install Android NDK
       run: |
-        sdkmanager "ndk;28.0.13004108"
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.0.13004108" >> $GITHUB_ENV
+        sdkmanager "ndk;29.0.14206865"
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/29.0.14206865" >> $GITHUB_ENV
     - name: Setup keystore
       env:
         KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
@@ -110,7 +112,7 @@ jobs:
         mkdir -p apk_out
         find target -name "*.apk" -exec cp {} apk_out/Oxyshop_And.apk \;
     - name: Upload APK
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: apk-android
         path: apk_out/Oxyshop_And.apk
@@ -119,18 +121,18 @@ jobs:
     runs-on: ubuntu-latest
     name: Release
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - name: Get version
       id: version
       run: |
         VERSION=$(grep '^version' Cargo.toml | head -1 | sed 's/.*"\(.*\)".*/\1/')
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
     - name: Download all artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         merge-multiple: true
     - name: Deploy to GitHub Release
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ steps.version.outputs.version }}
         name: Oxyshop ${{ steps.version.outputs.version }}
