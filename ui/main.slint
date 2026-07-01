@@ -38,6 +38,7 @@ export component AppWindow inherits Window {
     in-out property <string> stock-search;
 
     callback stock-search-changed(string);
+    callback stock-add;
     callback stock-inc(int);
     callback stock-dec(int);
     callback stock-toggle-cat(string);
@@ -113,7 +114,7 @@ export component AppWindow inherits Window {
 
     // ── Item modal ─────────────────────────────────────────────────────────
     in-out property <bool>   item-modal-active;
-    in property <bool>       item-modal-is-edit;
+    in-out property <bool>   item-modal-is-edit;
     in-out property <string> item-modal-name;
     in-out property <string> item-modal-cat;
     in-out property <string> item-modal-qty-str;
@@ -208,7 +209,7 @@ export component AppWindow inherits Window {
                 lang-en:    root.lang-en;
                 search-text <=> root.stock-search;
                 search-changed(t) => { root.stock-search-changed(t); }
-                add-clicked        => { root.item-modal-active = true; }
+                add-clicked        => { root.stock-add(); }
                 export-clicked     => { root.stock-export(); }
                 import-clicked     => { root.stock-import(); }
                 inc(i)             => { root.stock-inc(i); }

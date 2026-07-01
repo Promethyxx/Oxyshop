@@ -36,6 +36,21 @@ fn setup_stock(
         move |_| rs()
     });
 
+    ui.on_stock_add({
+        let app = app_state.clone();
+        let ui_weak = ui.as_weak();
+        move || {
+            lock_app(&app).ctx_target = -1;
+            let Some(ui) = ui_weak.upgrade() else { return };
+            ui.set_item_modal_is_edit(false);
+            ui.set_item_modal_name("".into());
+            ui.set_item_modal_cat("".into());
+            ui.set_item_modal_qty_str("0".into());
+            ui.set_item_modal_obj_str("0".into());
+            ui.set_item_modal_active(true);
+        }
+    });
+
     ui.on_stock_inc({
         let app = app_state.clone();
         let rs = rs.clone();

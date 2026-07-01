@@ -51,14 +51,19 @@ export component ItemModal inherits Rectangle {
                     height: 40px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
                     background: Palette.card; clip: true;
+                    TouchArea { clicked => { name-ti.focus(); } }
                     HorizontalLayout {
                         padding-left: 10px; padding-right: 10px; alignment: center;
                         name-ti := TextInput {
+                            horizontal-stretch: 1;
                             text <=> root.field-name;
                             font-size: Palette.fs + 0.5px; color: Palette.text;
                             horizontal-alignment: left;
                         }
-                        if name-ti.text == "" && !name-ti.has-focus : Text {
+                    }
+                    if name-ti.text == "" && !name-ti.has-focus : HorizontalLayout {
+                        padding-left: 10px; padding-right: 10px; alignment: center;
+                        Text {
                             text: root.lang-en ? "e.g. Milk" : "Ex: Lait"; font-size: Palette.fs + 0.5px; color: Palette.text3;
                         }
                     }
@@ -73,14 +78,19 @@ export component ItemModal inherits Rectangle {
                     height: 40px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
                     background: Palette.card; clip: true;
+                    TouchArea { clicked => { cat-ti.focus(); } }
                     HorizontalLayout {
                         padding-left: 10px; padding-right: 10px; alignment: center;
                         cat-ti := TextInput {
+                            horizontal-stretch: 1;
                             text <=> root.field-cat;
                             font-size: Palette.fs + 0.5px; color: Palette.text;
                             horizontal-alignment: left;
                         }
-                        if cat-ti.text == "" && !cat-ti.has-focus : Text {
+                    }
+                    if cat-ti.text == "" && !cat-ti.has-focus : HorizontalLayout {
+                        padding-left: 10px; padding-right: 10px; alignment: center;
+                        Text {
                             text: root.lang-en ? "Food" : "Nourriture"; font-size: Palette.fs + 0.5px; color: Palette.text3;
                         }
                     }
@@ -97,9 +107,11 @@ export component ItemModal inherits Rectangle {
                         height: 40px; border-radius: 8px;
                         border-width: 1px; border-color: Palette.card-border;
                         background: Palette.card; clip: true;
+                        TouchArea { clicked => { qty-ti.focus(); } }
                         HorizontalLayout {
                             padding-left: 10px; alignment: center;
-                            TextInput {
+                            qty-ti := TextInput {
+                                horizontal-stretch: 1;
                                 text <=> root.field-qty-str;
                                 input-type: number;
                                 font-size: Palette.fs + 0.5px; color: Palette.text;
@@ -115,9 +127,11 @@ export component ItemModal inherits Rectangle {
                         height: 40px; border-radius: 8px;
                         border-width: 1px; border-color: Palette.card-border;
                         background: Palette.card; clip: true;
+                        TouchArea { clicked => { obj-ti.focus(); } }
                         HorizontalLayout {
                             padding-left: 10px; alignment: center;
-                            TextInput {
+                            obj-ti := TextInput {
+                                horizontal-stretch: 1;
                                 text <=> root.field-obj-str;
                                 input-type: number;
                                 font-size: Palette.fs + 0.5px; color: Palette.text;
@@ -183,9 +197,11 @@ export component ObjModal inherits Rectangle {
                     height: 40px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
                     background: Palette.card; clip: true;
+                    TouchArea { clicked => { objval-ti.focus(); } }
                     HorizontalLayout {
                         padding-left: 10px; alignment: center;
-                        TextInput {
+                        objval-ti := TextInput {
+                            horizontal-stretch: 1;
                             text <=> root.value-str;
                             input-type: number;
                             font-size: Palette.fs + 0.5px; color: Palette.text;
@@ -327,9 +343,11 @@ export component MealModal inherits Rectangle {
                         height: 40px; border-radius: 8px;
                         border-width: 1px; border-color: Palette.card-border;
                         background: Palette.card; clip: true;
+                        TouchArea { clicked => { time-ti.focus(); } }
                         HorizontalLayout {
                             padding-left: 8px; alignment: center;
-                            TextInput {
+                            time-ti := TextInput {
+                                horizontal-stretch: 1;
                                 text <=> root.field-time;
                                 font-size: Palette.fs; color: Palette.text;
                                 horizontal-alignment: left;
@@ -344,14 +362,19 @@ export component MealModal inherits Rectangle {
                         height: 40px; border-radius: 8px;
                         border-width: 1px; border-color: Palette.card-border;
                         background: Palette.card; clip: true;
+                        TouchArea { clicked => { lbl-ti.focus(); } }
                         HorizontalLayout {
                             padding-left: 8px; alignment: center;
                             lbl-ti := TextInput {
+                                horizontal-stretch: 1;
                                 text <=> root.field-label;
                                 font-size: Palette.fs; color: Palette.text;
                                 horizontal-alignment: left;
                             }
-                            if lbl-ti.text == "" && !lbl-ti.has-focus : Text {
+                        }
+                        if lbl-ti.text == "" && !lbl-ti.has-focus : HorizontalLayout {
+                            padding-left: 8px; alignment: center;
+                            Text {
                                 text: lang-en ? "e.g. Breakfast" : "Ex: Petit-déjeuner";
                                 font-size: Palette.fs; color: Palette.text3;
                             }
@@ -384,9 +407,11 @@ export component MealModal inherits Rectangle {
                     height: 90px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
                     background: Palette.card; clip: true;
+                    TouchArea { clicked => { content-ti.focus(); } }
                     HorizontalLayout {
                         padding: 8px;
-                        TextInput {
+                        content-ti := TextInput {
+                            horizontal-stretch: 1;
                             text <=> root.field-content;
                             wrap: word-wrap;
                             font-size: Palette.fs; color: Palette.text;
@@ -457,9 +482,11 @@ export component QtyModal inherits Rectangle {
                     height: 40px; border-radius: 8px;
                     border-width: 1px; border-color: Palette.card-border;
                     background: Palette.card; clip: true;
+                    TouchArea { clicked => { qtyval-ti.focus(); } }
                     HorizontalLayout {
                         padding-left: 10px; alignment: center;
-                        TextInput {
+                        qtyval-ti := TextInput {
+                            horizontal-stretch: 1;
                             text <=> root.value-str;
                             input-type: number;
                             font-size: Palette.fs + 0.5px; color: Palette.text;
