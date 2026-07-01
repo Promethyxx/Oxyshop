@@ -71,6 +71,11 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
       with:
         targets: aarch64-linux-android
+    - name: Install LLVM/clang toolchain
+      # xbuild downloads its own slimmed-down NDK (libs/headers only) and expects
+      # clang/llvm-ar/lld to already be present on the host — they're not on
+      # ubuntu-latest by default under these exact names.
+      run: sudo apt-get update && sudo apt-get install -y clang lld llvm
     - name: Cache Cargo
       uses: actions/cache@v5
       with:
@@ -87,20 +92,17 @@ jobs:
         java-version: 21
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
-    - name: Install Android NDK and Platform
+    - name: Install Android platform 37 (SDK, for aapt/manifest tooling)
       run: |
-        sdkmanager "ndk;29.0.14206865" "platforms;android-37.0"
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/29.0.14206865" >> $GITHUB_ENV
-        # xbuild/cargo-apk both look for android-37, but SDK 37 installs as android-37.0
+        sdkmanager "platforms;android-37.0"
         ln -sf $ANDROID_SDK_ROOT/platforms/android-37.0 $ANDROID_SDK_ROOT/platforms/android-37
     - name: Install xbuild
       # crates.io release of xbuild is stale/broken for some targets (rust-mobile/xbuild#164),
       # so we install straight from the repo.
       run: cargo install --git https://github.com/rust-mobile/xbuild xbuild
     - name: Build APK (unsigned/debug-signed)
+      # xbuild downloads and manages its own NDK independently of ANDROID_NDK_HOME.
       run: x build --release --platform android --arch arm64
-      env:
-        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
     - name: Locate and rename raw APK
       run: |
         mkdir -p apk_out
