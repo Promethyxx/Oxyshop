@@ -91,26 +91,38 @@ jobs:
       run: |
         sdkmanager "ndk;29.0.14206865" "platforms;android-37.0"
         echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/29.0.14206865" >> $GITHUB_ENV
-        # cargo-apk looks for android-37 but SDK 37 installs as android-37.0
+        # xbuild/cargo-apk both look for android-37, but SDK 37 installs as android-37.0
         ln -sf $ANDROID_SDK_ROOT/platforms/android-37.0 $ANDROID_SDK_ROOT/platforms/android-37
-    - name: Setup keystore
+    - name: Install xbuild
+      # crates.io release of xbuild is stale/broken for some targets (rust-mobile/xbuild#164),
+      # so we install straight from the repo.
+      run: cargo install --git https://github.com/rust-mobile/xbuild xbuild
+    - name: Build APK (unsigned/debug-signed)
+      run: x build --release --platform android --arch arm64
+      env:
+        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+    - name: Locate and rename raw APK
+      run: |
+        mkdir -p apk_out
+        # Known xbuild+cdylib naming quirk (rust-mobile/xbuild, slint-ui/slint#5731):
+        # the .so can end up named lib<crate>_lib.so instead of lib<crate>.so.
+        # Harmless no-op if the file doesn't exist under that name.
+        find target/x -name "*_lib.so" | while read -r f; do
+          cp "$f" "${f%_lib.so}.so"
+        done
+        find target/x -name "*.apk" -exec cp {} apk_out/Oxyshop_And_unsigned.apk \; -quit
+    - name: Sign APK
       env:
         KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
         STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
       run: |
-        echo "$KEYSTORE_B64" | base64 -d > "$GITHUB_WORKSPACE/keystore.jks"
-        printf '\n[package.metadata.android.signing.release]\npath = "%s/keystore.jks"\n' "$GITHUB_WORKSPACE" >> Cargo.toml
-        printf 'keystore_password = "%s"\n' "$STORE_PASSWORD" >> Cargo.toml
-    - name: Install cargo-apk
-      run: cargo install cargo-apk
-    - name: Build APK
-      run: cargo apk build --release --lib
-      env:
-        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
-    - name: Rename APK
-      run: |
-        mkdir -p apk_out
-        find target -name "*.apk" -exec cp {} apk_out/Oxyshop_And.apk \;
+        echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/keystore.jks"
+        BUILD_TOOLS=$(ls "$ANDROID_SDK_ROOT/build-tools" | sort -V | tail -1)
+        "$ANDROID_SDK_ROOT/build-tools/$BUILD_TOOLS/apksigner" sign \
+          --ks "$RUNNER_TEMP/keystore.jks" \
+          --ks-pass "env:STORE_PASSWORD" \
+          --out apk_out/Oxyshop_And.apk \
+          apk_out/Oxyshop_And_unsigned.apk
     - name: Upload APK
       uses: actions/upload-artifact@v7
       with:

@@ -1,6 +1,6 @@
 [package]
 name = "Oxyshop"
-version = "0.8.1"
+version = "0.9.0"
 edition = "2024"
 
 [features]
@@ -43,20 +43,9 @@ slint-build = "1.17"
 [target.'cfg(target_os = "windows")'.build-dependencies]
 winresource = "0.1"
 
-[package.metadata.android]
-package   = "io.github.promethyxx.oxyshop"
-resources = "assets/res"
-
-[package.metadata.android.sdk]
-min_sdk_version    = 28
-target_sdk_version = 37
-
-[[package.metadata.android.uses_permission]]
-name = "android.permission.INTERNET"
-
-[package.metadata.android.application]
-label = "Oxyshop"
-icon  = "@mipmap/ic_launcher"
+# La config Android (package, sdk, permissions, label, icon) est maintenant
+# dans xbuild.yaml à la racine du projet : xbuild ne lit pas ce bloc,
+# contrairement à cargo-apk qui l'utilisait auparavant.
 
 [profile.release]
 opt-level     = "z"
