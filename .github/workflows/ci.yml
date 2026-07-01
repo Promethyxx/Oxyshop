@@ -86,13 +86,13 @@ jobs:
         distribution: temurin
         java-version: 21
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v4
-    - name: Install Android platform 37
-      run: sdkmanager "platforms;android-37"
-    - name: Install Android NDK
+      uses: android-actions/setup-android@v3
+    - name: Install Android NDK and Platform
       run: |
-        sdkmanager "ndk;29.0.14206865"
+        sdkmanager "ndk;29.0.14206865" "platforms;android-37.0"
         echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/29.0.14206865" >> $GITHUB_ENV
+        # cargo-apk looks for android-37 but SDK 37 installs as android-37.0
+        ln -sf $ANDROID_SDK_ROOT/platforms/android-37.0 $ANDROID_SDK_ROOT/platforms/android-37
     - name: Setup keystore
       env:
         KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
