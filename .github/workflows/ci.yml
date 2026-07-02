@@ -89,10 +89,8 @@ jobs:
       uses: android-actions/setup-android@v3
     - name: Install Android NDK and Platform
       run: |
-        sdkmanager "ndk;29.0.14206865" "platforms;android-37.0"
+        sdkmanager "ndk;29.0.14206865" "platforms;android-36"
         echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/29.0.14206865" >> $GITHUB_ENV
-        # cargo-apk looks for android-37 but SDK 37 installs as android-37.0
-        ln -sf $ANDROID_SDK_ROOT/platforms/android-37.0 $ANDROID_SDK_ROOT/platforms/android-37
     - name: Setup keystore
       env:
         KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
