@@ -28,11 +28,11 @@ url = "2.5"
 # --- Desktop ---
 [target.'cfg(not(target_os = "android"))'.dependencies]
 rfd   = "0.17"
-slint = { version = "1.17", features = ["backend-winit", "renderer-femtovg"] }
+slint = { version = "1.18", features = ["backend-winit", "renderer-femtovg"] }
 
 # --- Android ---
 [target.'cfg(target_os = "android")'.dependencies]
-slint            = { version = "1.17", features = ["backend-android-activity-06", "renderer-skia"] }
+slint            = { version = "1.18", features = ["backend-android-activity-06", "renderer-skia"] }
 android-activity = { version = "0.6.1", features = ["native-activity"] }
 webpki-roots     = "1.0.9"
 rustls           = { version = "0.23", features = ["aws_lc_rs"] }
