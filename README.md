@@ -9,9 +9,9 @@
 - French
 ---
 ## Platforms
-| | Linux ARM64 | Linux x64 | Mac ARM64 | Windows x64 |
+| | Linux ARM64 | Linux x64 | Windows x64 |
 |---|:---:|:---:|:---:|:---:|
-| Oxyshop | ✅ | ✅ | 🛠️ | ✅ |
+| Oxyshop | ✅ | ✅ | ✅ |
 ---
 ## Building from source
 ### Android
