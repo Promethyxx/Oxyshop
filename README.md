@@ -10,7 +10,7 @@
 ---
 ## Platforms
 | | Linux ARM64 | Linux x64 | Windows x64 |
-|---|:---:|:---:|:---:|:---:|
+|---|:---:|:---:|:---:|
 | Oxyshop | ✅ | ✅ | ✅ |
 ---
 ## Building from source
