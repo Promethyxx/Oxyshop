@@ -37,8 +37,7 @@ This project is licensed under the GNU General Public License v3.0 — see Licen
 ---
 ## Roadmap
 ## 🔴 NOW
- - Security audit and quality control
- - Webdav and autosave fix
+   - deletes ELF both version for Linux and replace them by a flatpak
 ## 🟡 NEXT
  - ### Release:
     - Chocolatey
