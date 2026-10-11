@@ -10,7 +10,7 @@
 ---
 ## Platforms
 | Oxyshop | |
-|---|:---:|
+|:---|:---:|
 | Android | ✅ |
 | Linux ARM64 | ✅ |
 | Linux x64 | ✅ |
