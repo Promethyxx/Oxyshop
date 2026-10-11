@@ -42,6 +42,8 @@ This project is licensed under the GNU General Public License v3.0 — see Licen
 ## Roadmap
 ## 🔴 NOW
    - deletes ELF both version for Linux and replace them by a flatpak in CICD
+   - Android UI fix keyboard savings (actually only button work)
+   - Menu translation titles
 ## 🟡 NEXT
  - ### Release:
     - Chocolatey
