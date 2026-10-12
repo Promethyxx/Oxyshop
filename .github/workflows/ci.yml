@@ -5,31 +5,19 @@ permissions:
   contents: write
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  APP_ID: io.github.promethyxx.Oxyshop
+  FREEDESKTOP: "25.08"
+  KDE: "6.10"
 jobs:
-  build:
-    strategy:
-      matrix:
-        include:
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            label: Win_x64
-            artifact_name: Oxyshop_Win_x64.exe
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            label: Lin_x64
-            artifact_name: Oxyshop_Lin_x64
-          - os: ubuntu-24.04-arm
-            target: aarch64-unknown-linux-gnu
-            label: Lin_arm64
-            artifact_name: Oxyshop_Lin_ARM
-    runs-on: ${{ matrix.os }}
-    name: Build ${{ matrix.label }}
+  build-windows:
+    runs-on: windows-latest
+    name: Build Win_x64
     steps:
     - uses: actions/checkout@v7
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
-        targets: ${{ matrix.target }}
+        targets: x86_64-pc-windows-msvc
     - name: Cache Cargo
       uses: actions/cache@v5
       with:
@@ -37,31 +25,117 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
           target
-        key: ${{ matrix.label }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: ${{ matrix.label }}-cargo-
-    - name: Install Linux deps
-      if: runner.os == 'Linux'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc g++ cmake pkg-config libfontconfig1-dev \
-          libx11-dev libxcursor-dev libxrandr-dev libxi-dev \
-          libgl1-mesa-dev libwayland-dev libxkbcommon-dev libssl-dev
+        key: Win_x64-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: Win_x64-cargo-
     - name: Build
-      run: cargo build --release --features="desktop" --target ${{ matrix.target }}
-    - name: Prepare binary (Windows)
-      if: runner.os == 'Windows'
-      run: Copy-Item target/${{ matrix.target }}/release/Oxyshop.exe ${{ matrix.artifact_name }}
+      run: cargo build --release --features="desktop" --target x86_64-pc-windows-msvc
+    - name: Prepare binary
+      run: Copy-Item target/x86_64-pc-windows-msvc/release/Oxyshop.exe Oxyshop_Win_x64.exe
       shell: pwsh
-    - name: Prepare binary (Linux)
-      if: runner.os == 'Linux'
-      run: |
-        cp target/${{ matrix.target }}/release/Oxyshop ${{ matrix.artifact_name }}
-        chmod +x ${{ matrix.artifact_name }}
     - name: Upload artifact
       uses: actions/upload-artifact@v7
       with:
-        name: binary-${{ matrix.label }}
+        name: binary-Win_x64
+        path: Oxyshop_Win_x64.exe
+
+  build-flatpak:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+            artifact_name: Oxyshop_Lin_x64.flatpak
+            label: Lin_x64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
+            artifact_name: Oxyshop_Lin_ARM.flatpak
+            label: Lin_arm64
+    runs-on: ${{ matrix.os }}
+    name: Build Flatpak ${{ matrix.label }}
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install Flatpak tooling
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y flatpak flatpak-builder python3-pip curl
+        flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+        flatpak install --user -y flathub \
+          org.kde.Platform//${KDE} \
+          org.kde.Sdk//${KDE} \
+          org.freedesktop.Sdk.Extension.rust-stable//${FREEDESKTOP}
+    - name: Generate cargo-sources.json
+      run: |
+        pip install --break-system-packages aiohttp tomlkit
+        curl -fsSL -o flatpak-cargo-generator.py https://raw.githubusercontent.com/flatpak/flatpak-builder-tools/master/cargo/flatpak-cargo-generator.py
+        mkdir -p flatpak-build
+        python3 flatpak-cargo-generator.py Cargo.lock -o flatpak-build/cargo-sources.json
+    - name: Generate Flatpak manifest
+      run: |
+        cat > flatpak-build/${APP_ID}.yml <<EOF
+        app-id: ${APP_ID}
+        runtime: org.kde.Platform
+        runtime-version: '${KDE}'
+        sdk: org.kde.Sdk
+        sdk-extensions:
+          - org.freedesktop.Sdk.Extension.rust-stable
+        command: Oxyshop
+        finish-args:
+          - --share=ipc
+          - --share=network
+          - --socket=wayland
+          - --socket=fallback-x11
+          - --device=dri
+          - --filesystem=home
+        build-options:
+          append-path: /usr/lib/sdk/rust-stable/bin
+          cflags: -g
+          cflags-override: true
+          cxxflags: -g
+          cxxflags-override: true
+          env:
+            CARGO_HOME: /run/build/Oxyshop/cargo
+        cleanup:
+          - /include
+          - /lib/cmake
+          - /lib/pkgconfig
+          - /share/doc
+          - /share/man
+          - '*.a'
+          - '*.la'
+        modules:
+          - name: Oxyshop
+            buildsystem: simple
+            build-commands:
+              - cargo build --release --offline --features="desktop"
+              - install -Dm755 target/release/Oxyshop /app/bin/Oxyshop
+              - install -Dm644 assets/${APP_ID}.desktop /app/share/applications/${APP_ID}.desktop
+              - install -Dm644 assets/${APP_ID}.metainfo.xml /app/share/metainfo/${APP_ID}.metainfo.xml
+              - install -Dm644 assets/Oxyshop_icon.png /app/share/icons/hicolor/512x512/apps/${APP_ID}.png
+            sources:
+              - type: git
+                url: https://github.com/${GITHUB_REPOSITORY}.git
+                commit: ${GITHUB_SHA}
+              - cargo-sources.json
+        EOF
+        cat flatpak-build/${APP_ID}.yml
+    - name: Cache Flatpak builder
+      uses: actions/cache@v5
+      with:
+        path: .flatpak-builder
+        key: flatpak-${{ matrix.arch }}-${{ hashFiles('Cargo.lock') }}
+        restore-keys: flatpak-${{ matrix.arch }}-
+    - name: Build Flatpak
+      run: |
+        flatpak-builder --user --force-clean --disable-rofiles-fuse --arch=${{ matrix.arch }} \
+          --repo=flatpak-repo flatpak-build/build flatpak-build/${APP_ID}.yml
+        flatpak build-bundle --arch=${{ matrix.arch }} flatpak-repo ${{ matrix.artifact_name }} ${APP_ID}
+    - name: Upload artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: flatpak-${{ matrix.label }}
         path: ${{ matrix.artifact_name }}
+
   build-android:
     runs-on: ubuntu-latest
     name: Build Android APK
@@ -114,8 +188,9 @@ jobs:
       with:
         name: apk-android
         path: apk_out/Oxyshop_And.apk
+
   release:
-    needs: [build, build-android]
+    needs: [build-windows, build-flatpak, build-android]
     runs-on: ubuntu-latest
     name: Release
     steps:
@@ -139,13 +214,16 @@ jobs:
           | Platform | Oxyshop | Name |
           |---|:---:|---|
           | Android | ✅ | Oxyshop_And.apk |
-          | Linux ARM64 | ✅ | Oxyshop_Lin_ARM |
-          | Linux x64 | ✅ | Oxyshop_Lin_x64 |
+          | Linux ARM64 | ✅ | Oxyshop_Lin_ARM.flatpak |
+          | Linux x64 | ✅ | Oxyshop_Lin_x64.flatpak |
           | Windows x64 | ✅ | Oxyshop_Win_x64.exe |
+
+          ## Linux install
+          `flatpak install --user Oxyshop_Lin_x64.flatpak` (or `Oxyshop_Lin_ARM.flatpak` on ARM64)
         files: |
           Oxyshop_Win_x64.exe
-          Oxyshop_Lin_x64
-          Oxyshop_Lin_ARM
+          Oxyshop_Lin_x64.flatpak
+          Oxyshop_Lin_ARM.flatpak
           Oxyshop_And.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

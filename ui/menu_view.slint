@@ -17,6 +17,17 @@ export component MenuView inherits Rectangle {
     callback meal-add;
     callback meal-edit-open(int);
 
+    pure function tr-label(l: string) -> string {
+        if (!lang-en) { return l; }
+        if (l == "Petit-déjeuner" || l == "Petit-dejeuner") { return "Breakfast"; }
+        if (l == "Collation") { return "Morning snack"; }
+        if (l == "Déjeuner" || l == "Dejeuner" || l == "Dîner" || l == "Diner") { return "Lunch"; }
+        if (l == "Goûter" || l == "Gouter") { return "Afternoon snack"; }
+        if (l == "Souper") { return "Dinner"; }
+        if (l == "Soir") { return "Evening"; }
+        return l;
+    }
+
     VerticalLayout {
         padding: 20px; spacing: 0px;
 
@@ -85,7 +96,7 @@ export component MenuView inherits Rectangle {
                                 letter-spacing: 1px;
                             }
                             Text {
-                                text: meal.label;
+                                text: root.tr-label(meal.label);
                                 font-size: Palette.fs-lg; font-weight: 700;
                                 color: Palette.text;
                                 horizontal-stretch: 1;

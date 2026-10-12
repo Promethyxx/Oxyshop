@@ -179,7 +179,10 @@ export component ObjModal inherits Rectangle {
         border-radius: 16px;
         background: Palette.bg2;
 
+        TouchArea { z: 0; }
+
         sh-col := VerticalLayout {
+            z: 1;
             padding-top: 20px; padding-bottom: 20px;
             padding-left: 16px; padding-right: 16px;
             spacing: 12px;
@@ -206,6 +209,7 @@ export component ObjModal inherits Rectangle {
                             input-type: number;
                             font-size: Palette.fs + 0.5px; color: Palette.text;
                             horizontal-alignment: left;
+                            accepted => { root.confirm(); }
                         }
                     }
                 }
@@ -464,7 +468,10 @@ export component QtyModal inherits Rectangle {
         border-radius: 16px;
         background: Palette.bg2;
 
+        TouchArea { z: 0; }
+
         sh-col := VerticalLayout {
+            z: 1;
             padding-top: 20px; padding-bottom: 20px;
             padding-left: 16px; padding-right: 16px;
             spacing: 12px;
@@ -491,6 +498,7 @@ export component QtyModal inherits Rectangle {
                             input-type: number;
                             font-size: Palette.fs + 0.5px; color: Palette.text;
                             horizontal-alignment: left;
+                            accepted => { root.confirm(); }
                         }
                     }
                 }
