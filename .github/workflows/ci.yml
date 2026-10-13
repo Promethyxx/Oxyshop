@@ -47,10 +47,6 @@ jobs:
             arch: x86_64
             artifact_name: Oxyshop_Lin_x64.flatpak
             label: Lin_x64
-          - os: ubuntu-24.04-arm
-            arch: aarch64
-            artifact_name: Oxyshop_Lin_ARM.flatpak
-            label: Lin_arm64
     runs-on: ${{ matrix.os }}
     name: Build Flatpak ${{ matrix.label }}
     steps:
@@ -214,16 +210,14 @@ jobs:
           | Platform | Oxyshop | Name |
           |---|:---:|---|
           | Android | ✅ | Oxyshop_And.apk |
-          | Linux ARM64 | ✅ | Oxyshop_Lin_ARM.flatpak |
           | Linux x64 | ✅ | Oxyshop_Lin_x64.flatpak |
           | Windows x64 | ✅ | Oxyshop_Win_x64.exe |
 
           ## Linux install
-          `flatpak install --user Oxyshop_Lin_x64.flatpak` (or `Oxyshop_Lin_ARM.flatpak` on ARM64)
+          `flatpak install --user Oxyshop_Lin_x64.flatpak`
         files: |
           Oxyshop_Win_x64.exe
           Oxyshop_Lin_x64.flatpak
-          Oxyshop_Lin_ARM.flatpak
           Oxyshop_And.apk
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
