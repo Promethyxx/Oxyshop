@@ -178,7 +178,7 @@ jobs:
     - name: Rename APK
       run: |
         mkdir -p apk_out
-        find target -name "*.apk" -exec cp {} apk_out/Oxyshop_And.apk \;
+        find target -name "*.apk" ! -name "*-unaligned.apk" -exec cp {} apk_out/Oxyshop_And.apk \;
     - name: Upload APK
       uses: actions/upload-artifact@v7
       with:

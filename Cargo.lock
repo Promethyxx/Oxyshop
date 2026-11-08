@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "Oxyshop"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "android-activity 0.6.1",
  "base64",
