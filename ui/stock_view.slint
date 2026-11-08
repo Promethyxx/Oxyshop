@@ -1,5 +1,5 @@
 import { Palette } from "palette.slint";
-import { StatCard, SearchBar, ActionBtn, IconBtn, PmBtn } from "components.slint";
+import { StatCard, SearchBar, ActionBtn, IconBtn, PmBtn, RibbonChip } from "components.slint";
 
 export struct StockItem {
     name: string,
@@ -15,7 +15,6 @@ export struct CatGroup {
     color: color,
     items: [StockItem],
     missing: int,
-    open: bool,
 }
 
 export component StockView inherits Rectangle {
@@ -28,6 +27,9 @@ export component StockView inherits Rectangle {
     in property <[CatGroup]> categories;
     in property <bool> lang-en;
     in-out property <string> search-text;
+    in-out property <int> sel: 0;
+    property <int> eff: min(root.sel, max(root.categories.length - 1, 0));
+    property <bool> chip-wide: root.categories.length > 0 && (root.width - 40px - 4px * root.categories.length) / root.categories.length > 74px;
 
     callback search-changed(string);
     callback add-clicked;
@@ -43,7 +45,6 @@ export component StockView inherits Rectangle {
     callback ctx-obj(int);
     callback obj-clicked(int);
     callback qty-clicked(int);
-    callback toggle-cat(string);
 
     VerticalLayout {
         padding: 20px; spacing: 0px;
@@ -55,7 +56,20 @@ export component StockView inherits Rectangle {
             Text { text: lang-en ? "Long press = edit · Tap target = change" : "Tap long = éditer · Tap objectif = modifier"; font-size: Palette.fs-xs; color: Palette.text2; }
         }
 
-        Rectangle { height: 16px; }
+        Rectangle { height: 12px; }
+
+        // Category ribbon
+        HorizontalLayout {
+            spacing: 4px; height: 54px;
+            for grp[gi] in root.categories : RibbonChip {
+                icon: grp.icon; label: grp.name; badge: grp.missing;
+                selected: gi == root.eff;
+                show-label: root.chip-wide;
+                clicked => { root.sel = gi; }
+            }
+        }
+
+        Rectangle { height: 12px; }
 
         // Stats
         HorizontalLayout {
@@ -89,36 +103,16 @@ export component StockView inherits Rectangle {
         // List
         Flickable {
             vertical-stretch: 1;
-            viewport-height: cat-col.preferred-height;
+            max-height: 10000px;
+            content-height: cat-col.preferred-height;
 
             cat-col := VerticalLayout {
-                spacing: 10px;
+                spacing: 0px;
 
-                for grp in root.categories : VerticalLayout {
+                for grp[gi] in root.categories : VerticalLayout {
                     spacing: 0px;
 
-                    // Category header
-                    cat-hdr := Rectangle {
-                        height: 38px;
-                        border-radius: 8px;
-                        background: cat-ta.pressed ? Palette.card : transparent;
-                        cat-ta := TouchArea { clicked => { root.toggle-cat(grp.name); } }
-                        HorizontalLayout {
-                            padding-left: 4px; padding-right: 4px;
-                            spacing: 8px; alignment: center;
-                            Text { text: grp.icon; font-size: 15px; }
-                            Text { text: grp.name; font-size: Palette.fs; font-weight: 600; color: Palette.text; horizontal-stretch: 1; }
-                            if grp.missing > 0 : Rectangle {
-                                width: miss-txt.preferred-width + 14px; height: 18px; border-radius: 9px;
-                                background: rgba(224,85,85,0.15);
-                                miss-txt := Text { text: grp.missing; font-size: Palette.fs-xs; font-weight: 500; color: Palette.danger; horizontal-alignment: center; vertical-alignment: center; }
-                            }
-                            Text { text: grp.open ? "▾" : "▸"; font-size: Palette.fs-xs; color: Palette.text3; }
-                        }
-                    }
-
-                    // Items
-                    if grp.open : VerticalLayout {
+                    if gi == root.eff : VerticalLayout {
                         spacing: 5px; padding-top: 4px;
 
                         for item in grp.items : Rectangle {

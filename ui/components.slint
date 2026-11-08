@@ -220,3 +220,36 @@ export component SyncBadge inherits Rectangle {
         vertical-alignment: center;
     }
 }
+
+export component RibbonChip inherits Rectangle {
+    in property <string> icon;
+    in property <string> label;
+    in property <int> badge;
+    in property <bool> selected;
+    in property <bool> show-label: true;
+    callback clicked;
+
+    horizontal-stretch: 1;
+    min-width: 0px;
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: selected ? Palette.green : Palette.card-border;
+    background: selected ? Palette.green : (ta.pressed ? Palette.card-border : Palette.card);
+    ta := TouchArea { clicked => { root.clicked(); } }
+
+    VerticalLayout {
+        alignment: center; spacing: 2px;
+        Text { text: root.icon; font-size: 17px; horizontal-alignment: center; }
+        if root.show-label : Text {
+            text: root.label;
+            font-size: Palette.fs-sm; font-weight: 600;
+            color: root.selected ? Palette.bg : Palette.text;
+            horizontal-alignment: center; overflow: elide;
+        }
+    }
+    if root.badge > 0 : Rectangle {
+        x: parent.width - 11px; y: 3px;
+        width: 8px; height: 8px; border-radius: 4px;
+        background: Palette.danger;
+    }
+}

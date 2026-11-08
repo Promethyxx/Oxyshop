@@ -28,7 +28,7 @@ jobs:
         key: Win_x64-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: Win_x64-cargo-
     - name: Build
-      run: cargo build --release --features="desktop" --target x86_64-pc-windows-msvc
+      run: cargo build --release --target x86_64-pc-windows-msvc
     - name: Prepare binary
       run: Copy-Item target/x86_64-pc-windows-msvc/release/Oxyshop.exe Oxyshop_Win_x64.exe
       shell: pwsh
@@ -103,7 +103,7 @@ jobs:
           - name: Oxyshop
             buildsystem: simple
             build-commands:
-              - cargo build --release --offline --features="desktop"
+              - cargo build --release --offline
               - install -Dm755 target/release/Oxyshop /app/bin/Oxyshop
               - install -Dm644 assets/${APP_ID}.desktop /app/share/applications/${APP_ID}.desktop
               - install -Dm644 assets/${APP_ID}.metainfo.xml /app/share/metainfo/${APP_ID}.metainfo.xml

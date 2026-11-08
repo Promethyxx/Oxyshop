@@ -57,8 +57,12 @@ fn setup_stock(
         let rc = rc.clone();
         move |gi| {
             let mut st = lock_app(&app);
-            if let Some(item) = st.state.stock.get_mut(gi as usize) {
+            let hook = st.state.stock.get_mut(gi as usize).map(|item| {
                 item.qty += 1;
+                (item.cat.clone(), item.name.clone())
+            });
+            if let Some((cat, name)) = hook {
+                st.state.expiry_on_stock_increase(&cat, &name, 1);
             }
             st.save();
             drop(st);
@@ -80,18 +84,6 @@ fn setup_stock(
             drop(st);
             rs();
             rc();
-        }
-    });
-
-    ui.on_stock_toggle_cat({
-        let app = app_state.clone();
-        let rs = rs.clone();
-        move |cat| {
-            let mut st = lock_app(&app);
-            let entry = st.open_cats.entry(cat.to_string()).or_insert(true);
-            *entry = !*entry;
-            drop(st);
-            rs();
         }
     });
 
@@ -156,6 +148,7 @@ fn setup_stock(
                             let count = new_state.stock.len();
                             let mut st = lock_app(&app);
                             st.state = new_state;
+                            st.state.expiry_seed();
                             st.save();
                             let lang = st.lang_en;
                             drop(st);
@@ -306,10 +299,14 @@ fn setup_modals(
             let lang = st.lang_en;
 
             if is_edit && gi < st.state.stock.len() {
-                st.state.stock[gi] = data::StockItem { name: name.clone(), cat, qty, obj };
+                let old = st.state.stock[gi].clone();
+                st.state.stock[gi] = data::StockItem { name: name.clone(), cat: cat.clone(), qty, obj };
+                st.state.expiry_rename(&old.cat, &old.name, &cat, &name);
+                st.state.expiry_on_stock_increase(&cat, &name, qty - old.qty);
                 toast(&format!("✓ {} {}", name, if lang { "edited" } else { "modifié" }));
             } else {
-                st.state.stock.push(data::StockItem { name: name.clone(), cat, qty, obj });
+                st.state.stock.push(data::StockItem { name: name.clone(), cat: cat.clone(), qty, obj });
+                st.state.expiry_on_stock_increase(&cat, &name, qty);
                 toast(&format!("✓ {} {}", name, if lang { "added" } else { "ajouté" }));
             }
             st.save();
@@ -394,7 +391,11 @@ fn setup_modals(
             let mut st = lock_app(&app);
             let gi = st.ctx_target as usize;
             if gi < st.state.stock.len() {
+                let old_qty = st.state.stock[gi].qty;
+                let cat = st.state.stock[gi].cat.clone();
+                let name = st.state.stock[gi].name.clone();
                 st.state.stock[gi].qty = val;
+                st.state.expiry_on_stock_increase(&cat, &name, val - old_qty);
                 st.save();
                 let lang = st.lang_en;
                 drop(st);
@@ -437,12 +438,15 @@ fn setup_courses(
                     (item.obj - item.qty).max(0)
                 };
                 let name = st.state.stock[gi].name.clone();
+                let cat = st.state.stock[gi].cat.clone();
                 st.state.checked.insert(k, new_checked);
                 if new_checked {
                     st.state.stock[gi].qty += need;
+                    st.state.expiry_on_stock_increase(&cat, &name, need);
                     toast(&format!("✓ +{} {}", need, name));
                 } else {
                     st.state.stock[gi].qty = (st.state.stock[gi].qty - need).max(0);
+                    st.state.expiry_on_stock_undo(&cat, &name, need);
                 }
                 st.save();
             }

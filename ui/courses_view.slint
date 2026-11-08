@@ -78,7 +78,7 @@ export component CoursesView inherits Rectangle {
 
         if !root.is-empty : Flickable {
             vertical-stretch: 1;
-            viewport-height: course-col.preferred-height;
+            content-height: course-col.preferred-height;
 
             course-col := VerticalLayout {
                 spacing: 12px;

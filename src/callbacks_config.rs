@@ -305,6 +305,7 @@ pub fn setup(
                             let lang = {
                                 let mut st = lock_app(&app);
                                 st.state = new_state;
+                                st.state.expiry_seed();
                                 st.save();
                                 st.lang_en
                             };
@@ -332,6 +333,7 @@ pub fn setup(
                         {
                             let mut st = lock_app(&app);
                             st.state = new_state;
+                            st.state.expiry_seed();
                             st.save();
                         }
                         toast(&format!("📥 {} articles importés", count));

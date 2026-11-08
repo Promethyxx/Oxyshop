@@ -2,11 +2,13 @@ import { Palette } from "palette.slint";
 import { Toast, SyncBadge, IconBtn } from "components.slint";
 import { StockView, StockItem, CatGroup } from "stock_view.slint";
 import { CoursesView, CourseItem, CourseCat } from "courses_view.slint";
+import { ExpiryView, ExpiryGroup, ExpiryEntry, ExpiryLotRow, ExcludedRow } from "expiry_view.slint";
 import { MenuView, MealSlot } from "menu_view.slint";
 import { ConfigView } from "config_view.slint";
 import { ItemModal, ObjModal, QtyModal, CtxMenu, MealModal } from "modals.slint";
+import { LotModal, ExpiryCtxMenu } from "expiry_modals.slint";
 
-export enum Tab { Menu, Stock, Courses, Config }
+export enum Tab { Menu, Stock, Expiry, Courses, Config }
 
 export component AppWindow inherits Window {
     title: "Oxyshop";
@@ -41,7 +43,6 @@ export component AppWindow inherits Window {
     callback stock-add;
     callback stock-inc(int);
     callback stock-dec(int);
-    callback stock-toggle-cat(string);
     callback stock-export;
     callback stock-import;
     callback stock-obj-clicked(int);
@@ -60,6 +61,43 @@ export component AppWindow inherits Window {
     callback course-search-changed(string);
     callback course-toggle(int, bool);
     callback courses-reset;
+
+    // ── Expiry ─────────────────────────────────────────────────────────────
+    in property <int> expiry-expired;
+    in property <int> expiry-soon;
+    in property <int> expiry-fill;
+    in property <[ExpiryGroup]> expiry-groups;
+    in property <[ExcludedRow]> expiry-excluded;
+    in property <int> expiry-excluded-count;
+    in-out property <string> expiry-search;
+    in-out property <bool> expiry-ctx-active;
+    callback expiry-search-changed(string);
+    callback expiry-opened;
+    callback expiry-add;
+    callback expiry-add-lot(string);
+    callback expiry-lot-clicked(string, int);
+    callback expiry-retire(string, int);
+    callback expiry-ctx(string);
+    callback expiry-ctx-close;
+    callback expiry-ctx-add-lot;
+    callback expiry-ctx-excl-item;
+    callback expiry-ctx-excl-cat;
+    callback expiry-include(string, bool);
+
+    // ── Lot modal ──────────────────────────────────────────────────────────
+    in-out property <bool>   lot-modal-active;
+    in-out property <bool>   lot-modal-is-edit;
+    in-out property <bool>   lot-modal-show-name;
+    in-out property <string> lot-modal-title;
+    in-out property <string> lot-modal-name;
+    in-out property <string> lot-modal-cat;
+    in-out property <string> lot-modal-qty-str;
+    in-out property <string> lot-modal-date-str;
+    callback lot-modal-confirm;
+    callback lot-modal-cancel;
+    callback lot-modal-quick(int);
+    callback lot-modal-retire;
+    callback lot-modal-delete-lot;
 
     // ── Menu ───────────────────────────────────────────────────────────────
     in property <[MealSlot]> meals;
@@ -214,12 +252,29 @@ export component AppWindow inherits Window {
                 import-clicked     => { root.stock-import(); }
                 inc(i)             => { root.stock-inc(i); }
                 dec(i)             => { root.stock-dec(i); }
-                toggle-cat(c)      => { root.stock-toggle-cat(c); }
                 obj-clicked(i)     => { root.stock-obj-clicked(i); }
                 qty-clicked(i)     => { root.stock-qty-clicked(i); }
                 ctx-edit(i)        => { root.stock-ctx-edit(i); }
                 ctx-delete(i)      => { root.stock-ctx-delete(i); }
                 ctx-obj(i)         => { root.stock-ctx-obj(i); }
+            }
+
+            if current-tab == Tab.Expiry : ExpiryView {
+                stat-expired:   root.expiry-expired;
+                stat-soon:      root.expiry-soon;
+                stat-fill:      root.expiry-fill;
+                groups:         root.expiry-groups;
+                excluded:       root.expiry-excluded;
+                excluded-count: root.expiry-excluded-count;
+                lang-en:        root.lang-en;
+                search-text <=> root.expiry-search;
+                search-changed(t)  => { root.expiry-search-changed(t); }
+                add-clicked        => { root.expiry-add(); }
+                add-lot(k)         => { root.expiry-add-lot(k); }
+                lot-clicked(k, i)  => { root.expiry-lot-clicked(k, i); }
+                retire(k, i)       => { root.expiry-retire(k, i); }
+                ctx(k)             => { root.expiry-ctx(k); }
+                include(k, c)      => { root.expiry-include(k, c); }
             }
 
             if current-tab == Tab.Courses : CoursesView {
@@ -297,6 +352,20 @@ export component AppWindow inherits Window {
                         Text { text: "Stock"; font-size: Palette.fs-xs + 0.5px; font-weight: 500; color: current-tab == Tab.Stock ? Palette.gold : Palette.text3; horizontal-alignment: center; }
                     }
                     TouchArea { clicked => { root.current-tab = Tab.Stock; } }
+                }
+
+                tab-expiry := Rectangle {
+                    horizontal-stretch: 1; background: transparent;
+                    if current-tab == Tab.Expiry : Rectangle {
+                        y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
+                        border-radius: 1px; background: Palette.gold;
+                    }
+                    VerticalLayout {
+                        alignment: center; spacing: 3px;
+                        Text { text: "⏳"; font-size: 20px; color: current-tab == Tab.Expiry ? Palette.gold : Palette.text3; horizontal-alignment: center; }
+                        Text { text: root.lang-en ? "Expiry" : "Expiration"; font-size: Palette.fs-xs + 0.5px; font-weight: 500; color: current-tab == Tab.Expiry ? Palette.gold : Palette.text3; horizontal-alignment: center; }
+                    }
+                    TouchArea { clicked => { root.current-tab = Tab.Expiry; root.expiry-opened(); } }
                 }
 
                 tab-courses := Rectangle {
@@ -387,6 +456,34 @@ export component AppWindow inherits Window {
         confirm  => { root.meal-modal-confirm(); }
         cancel   => { root.meal-modal-cancel(); }
         delete(i) => { root.meal-delete(i); }
+    }
+
+    LotModal {
+        x: 0; y: 0; width: root.width; height: root.height;
+        active         <=> root.lot-modal-active;
+        is-edit:           root.lot-modal-is-edit;
+        show-name:         root.lot-modal-show-name;
+        lang-en:           root.lang-en;
+        title:             root.lot-modal-title;
+        field-name     <=> root.lot-modal-name;
+        field-cat      <=> root.lot-modal-cat;
+        field-qty-str  <=> root.lot-modal-qty-str;
+        field-date-str <=> root.lot-modal-date-str;
+        confirm   => { root.lot-modal-confirm(); }
+        cancel    => { root.lot-modal-cancel(); }
+        quick(k)  => { root.lot-modal-quick(k); }
+        retire    => { root.lot-modal-retire(); }
+        delete-lot => { root.lot-modal-delete-lot(); }
+    }
+
+    ExpiryCtxMenu {
+        x: 0; y: 0; width: root.width; height: root.height;
+        active <=> root.expiry-ctx-active;
+        lang-en:   root.lang-en;
+        add-lot   => { root.expiry-ctx-add-lot(); }
+        excl-item => { root.expiry-ctx-excl-item(); }
+        excl-cat  => { root.expiry-ctx-excl-cat(); }
+        close     => { root.expiry-ctx-close(); }
     }
 
     Toast {

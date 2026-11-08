@@ -11,10 +11,12 @@ pub fn set_android_data_dir(path: PathBuf) {
     let _ = ANDROID_DATA_DIR.set(path);
 }
 
+#[cfg(target_os = "android")]
 pub fn android_data_dir() -> PathBuf {
     local_dir()
 }
 
+#[cfg(target_os = "android")]
 fn local_dir() -> PathBuf {
     #[cfg(target_os = "android")]
     if let Some(p) = ANDROID_DATA_DIR.get() {
@@ -487,6 +489,7 @@ pub fn default_export_path() -> PathBuf {
 }
 
 /// Exporte vers le chemin par défaut (comportement historique / Android).
+#[cfg(target_os = "android")]
 pub fn export_json(_cfg: &DavConfig, state: &AppState) -> Result<PathBuf, String> {
     export_json_to(&default_export_path(), state)
 }

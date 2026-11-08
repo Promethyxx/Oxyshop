@@ -9,6 +9,21 @@ pub struct StockItem {
     pub obj: i32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExpiryLot {
+    pub qty: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub date: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExpiryItem {
+    pub name: String,
+    pub cat: String,
+    #[serde(default)]
+    pub lots: Vec<ExpiryLot>,
+}
+
 // ── Meal data ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,6 +72,14 @@ pub struct AppState {
     pub checked: HashMap<String, bool>, // "cat:name" -> bool
     #[serde(default)]
     pub meals: Vec<MealEntry>,
+    #[serde(default)]
+    pub expiry: Vec<ExpiryItem>,
+    #[serde(default)]
+    pub expiry_excl_cats: Vec<String>,
+    #[serde(default)]
+    pub expiry_excl_items: Vec<String>,
+    #[serde(default)]
+    pub expiry_init: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub last_modified: Option<String>,
 }
@@ -67,6 +90,10 @@ impl AppState {
             stock: default_stock(),
             checked: HashMap::new(),
             meals: default_meals(),
+            expiry: Vec::new(),
+            expiry_excl_cats: Vec::new(),
+            expiry_excl_items: Vec::new(),
+            expiry_init: false,
             last_modified: None,
         }
     }

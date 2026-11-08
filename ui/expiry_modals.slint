@@ -1,0 +1,203 @@
+import { Palette } from "palette.slint";
+import { ActionBtn } from "components.slint";
+
+component Field inherits Rectangle {
+    in-out property <string> text <=> ti.text;
+    in property <string> placeholder;
+    in property <InputType> input-type: InputType.text;
+    callback accepted;
+
+    height: 40px; border-radius: 8px;
+    border-width: 1px; border-color: Palette.card-border;
+    background: Palette.card; clip: true;
+
+    TouchArea { clicked => { ti.focus(); } }
+    HorizontalLayout {
+        padding-left: 10px; padding-right: 10px; alignment: center;
+        ti := TextInput {
+            horizontal-stretch: 1;
+            input-type: root.input-type;
+            font-size: Palette.fs + 0.5px; color: Palette.text;
+            horizontal-alignment: left;
+            accepted => { root.accepted(); }
+        }
+    }
+    if ti.text == "" && !ti.has-focus : HorizontalLayout {
+        padding-left: 10px; padding-right: 10px; alignment: center;
+        Text { text: root.placeholder; font-size: Palette.fs + 0.5px; color: Palette.text3; }
+    }
+}
+
+export component LotModal inherits Rectangle {
+    in-out property <bool>   active: false;
+    in property  <bool>      is-edit: false;
+    in property  <bool>      show-name: false;
+    in property  <bool>      lang-en: false;
+    in property  <string>    title;
+    in-out property <string> field-name;
+    in-out property <string> field-cat;
+    in-out property <string> field-qty-str;
+    in-out property <string> field-date-str;
+    callback confirm;
+    callback cancel;
+    callback quick(int);
+    callback retire;
+    callback delete-lot;
+
+    background: active ? rgba(0,0,0,0.7) : transparent;
+    z: 200;
+
+    if active : TouchArea { z: 0; clicked => { root.cancel(); } }
+
+    sheet := Rectangle {
+        y: root.active ? root.height - self.height : root.height;
+        x: (root.width - self.width) / 2;
+        width: min(root.width, 500px);
+        height: sheet-col.preferred-height + 40px;
+        border-radius: 16px;
+        background: Palette.bg2;
+
+        TouchArea { z: 0; }
+
+        sheet-col := VerticalLayout {
+            z: 1;
+            padding-top: 20px; padding-bottom: 20px;
+            padding-left: 16px; padding-right: 16px;
+            spacing: 12px;
+
+            Text {
+                text: root.show-name ? (root.lang-en ? "New entry" : "Nouvelle entrée") : root.title;
+                font-size: Palette.fs-title - 8px; font-weight: 600;
+                color: Palette.text; horizontal-alignment: center;
+                overflow: elide;
+            }
+
+            if root.show-name : VerticalLayout {
+                spacing: 12px;
+                VerticalLayout {
+                    spacing: 3px;
+                    Text { text: root.lang-en ? "Name" : "Nom"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Field { text <=> root.field-name; placeholder: root.lang-en ? "e.g. Salad" : "Ex: Salade"; }
+                }
+                VerticalLayout {
+                    spacing: 3px;
+                    Text { text: root.lang-en ? "Category" : "Catégorie"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Field { text <=> root.field-cat; placeholder: root.lang-en ? "Food" : "Nourriture"; }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                VerticalLayout {
+                    width: 90px; spacing: 3px;
+                    Text { text: root.lang-en ? "Qty" : "Quantité"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Field { text <=> root.field-qty-str; input-type: InputType.number; }
+                }
+                VerticalLayout {
+                    horizontal-stretch: 1; spacing: 3px;
+                    Text { text: root.lang-en ? "Expiry date" : "Date d'échéance"; font-size: Palette.fs-md; color: Palette.text2; }
+                    Field {
+                        text <=> root.field-date-str;
+                        placeholder: root.lang-en ? "DD.MM.YYYY" : "JJ.MM.AAAA";
+                        accepted => { root.confirm(); }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 6px;
+                ActionBtn { label: root.lang-en ? "+3 d" : "+3 j"; primary: false; small: true; horizontal-stretch: 1; clicked => { root.quick(0); } }
+                ActionBtn { label: root.lang-en ? "+1 wk" : "+1 sem"; primary: false; small: true; horizontal-stretch: 1; clicked => { root.quick(1); } }
+                ActionBtn { label: root.lang-en ? "+1 mo" : "+1 mois"; primary: false; small: true; horizontal-stretch: 1; clicked => { root.quick(2); } }
+            }
+
+            Text {
+                text: root.lang-en
+                    ? "15.11.2026 · 15.11 · 11.2026 (end of month) · empty = to fill"
+                    : "15.11.2026 · 15.11 · 11.2026 (fin de mois) · vide = à renseigner";
+                font-size: Palette.fs-xs; color: Palette.text3;
+                wrap: word-wrap;
+            }
+
+            if root.is-edit : HorizontalLayout {
+                spacing: 8px;
+                ActionBtn { label: root.lang-en ? "− Used up" : "− Retirer"; primary: false; small: true; horizontal-stretch: 1; clicked => { root.retire(); } }
+                ActionBtn { label: root.lang-en ? "🗑️ Delete lot" : "🗑️ Supprimer le lot"; primary: false; small: true; horizontal-stretch: 1; clicked => { root.delete-lot(); } }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                ActionBtn { label: root.lang-en ? "Cancel" : "Annuler"; primary: false; horizontal-stretch: 1; clicked => { root.cancel(); } }
+                ActionBtn { label: root.is-edit ? "OK" : (root.lang-en ? "Add" : "Ajouter"); primary: true; horizontal-stretch: 1; clicked => { root.confirm(); } }
+            }
+        }
+
+        animate y { duration: 300ms; easing: ease-out; }
+    }
+
+    animate background { duration: 200ms; }
+}
+
+export component ExpiryCtxMenu inherits Rectangle {
+    in-out property <bool> active: false;
+    in property  <bool>    lang-en: false;
+    callback add-lot;
+    callback excl-item;
+    callback excl-cat;
+    callback close;
+
+    background: active ? rgba(0,0,0,0.4) : transparent;
+    z: 250;
+
+    if active : TouchArea { clicked => { root.close(); } }
+
+    if active : Rectangle {
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        width: 240px;
+        height: menu-col.preferred-height + 12px;
+        border-radius: 12px;
+        border-width: 1px;
+        border-color: Palette.card-border;
+        background: Palette.bg2;
+        drop-shadow-blur: 24px;
+        drop-shadow-color: rgba(0,0,0,0.4);
+
+        menu-col := VerticalLayout {
+            padding: 6px; spacing: 2px;
+
+            Rectangle {
+                height: 42px; border-radius: 8px;
+                background: r1.pressed ? Palette.card : transparent;
+                HorizontalLayout {
+                    padding-left: 14px; spacing: 10px; alignment: center;
+                    Text { text: "➕"; font-size: 14px; }
+                    Text { text: root.lang-en ? "Add a lot" : "Ajouter un lot"; font-size: Palette.fs; color: Palette.text; horizontal-stretch: 1; }
+                }
+                r1 := TouchArea { clicked => { root.add-lot(); root.close(); } }
+            }
+
+            Rectangle {
+                height: 42px; border-radius: 8px;
+                background: r2.pressed ? Palette.card : transparent;
+                HorizontalLayout {
+                    padding-left: 14px; spacing: 10px; alignment: center;
+                    Text { text: "🚫"; font-size: 14px; }
+                    Text { text: root.lang-en ? "Exclude this item" : "Exclure ce produit"; font-size: Palette.fs; color: Palette.text; horizontal-stretch: 1; }
+                }
+                r2 := TouchArea { clicked => { root.excl-item(); root.close(); } }
+            }
+
+            Rectangle {
+                height: 42px; border-radius: 8px;
+                background: r3.pressed ? Palette.card : transparent;
+                HorizontalLayout {
+                    padding-left: 14px; spacing: 10px; alignment: center;
+                    Text { text: "🚫"; font-size: 14px; }
+                    Text { text: root.lang-en ? "Exclude its category" : "Exclure sa catégorie"; font-size: Palette.fs; color: Palette.danger; horizontal-stretch: 1; }
+                }
+                r3 := TouchArea { clicked => { root.excl-cat(); root.close(); } }
+            }
+        }
+    }
+}

@@ -1,12 +1,13 @@
 mod callbacks_config;
 mod callbacks_data;
+mod callbacks_expiry;
 mod data;
+mod expiry;
 mod state;
 mod storage;
 
 use data::AppState;
-use state::{lock_app, make_categories, make_course_cats, make_meals, App};
-use std::collections::HashMap;
+use state::{lock_app, make_categories, make_course_cats, make_expiry, make_meals, App};
 use std::sync::{Arc, Mutex};
 use storage::{dav_load, load_config, load_local};
 
@@ -59,14 +60,17 @@ fn run() {
     if state.meals.is_empty() {
         state.meals = data::default_meals();
     }
+    state.expiry_seed();
 
     let app_state = Arc::new(Mutex::new(App {
         state,
-        open_cats: HashMap::new(),
         config: config.clone(),
         dav_ok,
         ctx_target: -1,
         meal_target: -1,
+        expiry_ctx_key: String::new(),
+        expiry_edit_key: String::new(),
+        expiry_edit_lot: -1,
         lang_en: false,
     }));
 
@@ -87,9 +91,11 @@ fn run() {
     let refresh_courses = make_refresh_courses(&ui, &app_state);
     let refresh_meals = make_refresh_meals(&ui, &app_state);
     let refresh_sync = make_refresh_sync(&ui, &app_state);
+    let refresh_expiry = make_refresh_expiry(&ui, &app_state);
     let toast = make_toast(&ui);
 
     callbacks_data::setup(&ui, &app_state, &refresh_stock, &refresh_courses, &refresh_meals, &toast);
+    callbacks_expiry::setup(&ui, &app_state, &refresh_stock, &refresh_courses, &refresh_expiry, &toast);
     callbacks_config::setup(&ui, &app_state, &refresh_stock, &refresh_courses, &refresh_sync, &toast);
 
     if let Err(e) = ui.run() {
@@ -102,7 +108,7 @@ fn run() {
 
 fn populate_initial(ui: &AppWindow, app_state: &Arc<Mutex<App>>) {
     let st = lock_app(app_state);
-    let cats = make_categories(&st.state.stock, "", &st.open_cats);
+    let cats = make_categories(&st.state.stock, "");
     let (cc, ct, cd, cr) = make_course_cats(&st.state.stock, &st.state.checked, "");
 
     ui.set_categories(cats);
@@ -118,6 +124,7 @@ fn populate_initial(ui: &AppWindow, app_state: &Arc<Mutex<App>>) {
     ui.set_courses_empty(ct == 0);
 
     ui.set_meals(make_meals(&st.state.meals));
+    push_expiry(ui, &st, "");
 
     ui.set_cfg_url(st.config.url.clone().into());
     ui.set_cfg_user(st.config.user.clone().into());
@@ -144,12 +151,35 @@ fn make_refresh_stock(ui: &AppWindow, app_state: &Arc<Mutex<App>>) -> RefreshFn 
         let Some(ui) = ui_weak.upgrade() else { return };
         let st = lock_app(&app);
         let search = ui.get_stock_search().to_string();
-        let cats = make_categories(&st.state.stock, &search, &st.open_cats);
+        let cats = make_categories(&st.state.stock, &search);
         ui.set_categories(cats);
         ui.set_stat_total(st.state.stock.len() as i32);
         ui.set_stat_ok(st.state.stock.iter().filter(|i| i.qty >= i.obj).count() as i32);
         ui.set_stat_low(st.state.stock.iter().filter(|i| i.qty > 0 && i.qty < i.obj).count() as i32);
         ui.set_stat_empty(st.state.stock.iter().filter(|i| i.qty <= 0 && i.obj > 0).count() as i32);
+        let exp_search = ui.get_expiry_search().to_string();
+        push_expiry(&ui, &st, &exp_search);
+    })
+}
+
+fn push_expiry(ui: &AppWindow, st: &App, search: &str) {
+    let m = make_expiry(&st.state, search, st.lang_en);
+    ui.set_expiry_groups(m.groups);
+    ui.set_expiry_excluded(m.excluded);
+    ui.set_expiry_excluded_count(m.excluded_count);
+    ui.set_expiry_expired(m.expired);
+    ui.set_expiry_soon(m.soon);
+    ui.set_expiry_fill(m.fill);
+}
+
+fn make_refresh_expiry(ui: &AppWindow, app_state: &Arc<Mutex<App>>) -> RefreshFn {
+    let ui_weak = ui.as_weak();
+    let app = app_state.clone();
+    Arc::new(move || {
+        let Some(ui) = ui_weak.upgrade() else { return };
+        let st = lock_app(&app);
+        let search = ui.get_expiry_search().to_string();
+        push_expiry(&ui, &st, &search);
     })
 }
 

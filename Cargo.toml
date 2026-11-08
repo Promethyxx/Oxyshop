@@ -1,9 +1,10 @@
 [package]
 name = "Oxyshop"
-version = "0.8.3"
+version = "1.0.1"
 edition = "2024"
 
 [features]
+default = ["desktop"]
 desktop = []
 
 [[bin]]
@@ -13,7 +14,7 @@ required-features = ["desktop"]
 
 [lib]
 crate-type = ["cdylib"]
-name = "Oxyshop_And"
+name = "oxyshop_and"
 path = "src/lib.rs"
 
 [dependencies]
@@ -27,7 +28,7 @@ url = "2.5"
 
 # --- Desktop ---
 [target.'cfg(not(target_os = "android"))'.dependencies]
-rfd   = "0.17"
+rfd   = "0.18"
 slint = { version = "1.18", features = ["backend-winit", "renderer-femtovg"] }
 
 # --- Android ---
