@@ -4,6 +4,7 @@
 use crate::state::{lock_app, App};
 #[cfg(target_os = "android")]
 use crate::storage::export_json;
+#[cfg(not(target_os = "android"))]
 use crate::storage::{export_json_to, import_json};
 use crate::data::{self, accent_idx, AppState, ACCENT_COLORS};
 use crate::{AppWindow, RefreshFn, ToastFn};
@@ -133,8 +134,11 @@ fn setup_stock(
     });
 
     ui.on_stock_import({
+        #[cfg(not(target_os = "android"))]
         let app = app_state.clone();
+        #[cfg(not(target_os = "android"))]
         let rs = rs.clone();
+        #[cfg(not(target_os = "android"))]
         let rc = rc.clone();
         let toast = toast.clone();
         move || {

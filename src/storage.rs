@@ -35,6 +35,7 @@ fn local_dir() -> PathBuf {
 fn base_dir(cfg: &DavConfig) -> PathBuf {
     #[cfg(target_os = "android")]
     {
+        let _ = cfg;
         if let Some(p) = ANDROID_DATA_DIR.get() {
             return p.clone();
         }

@@ -3,9 +3,11 @@
 
 use crate::state::{lock_app, App};
 use crate::storage::{
-    backup_on_exit, clear_config, dav_test, dav_test2, default_export_path, export_json_to,
-    import_json, save_config as save_cfg, DavConfig,
+    backup_on_exit, clear_config, dav_test, dav_test2, import_json, save_config as save_cfg,
+    DavConfig,
 };
+#[cfg(not(target_os = "android"))]
+use crate::storage::{default_export_path, export_json_to};
 use crate::{AppWindow, RefreshFn, ToastFn};
 use slint::ComponentHandle;
 use std::sync::{Arc, Mutex};
