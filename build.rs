@@ -1,6 +1,11 @@
 fn main() {
     slint_build::compile("ui/main.slint").unwrap();
     windows_resources();
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("android") {
+        println!("cargo:rustc-link-lib=camera2ndk");
+        println!("cargo:rustc-link-lib=mediandk");
+        println!("cargo:rustc-link-lib=nativewindow");
+    }
 }
 
 #[cfg(target_os = "windows")]
