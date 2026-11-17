@@ -1,6 +1,6 @@
 [package]
 name = "Oxyshop"
-version = "1.0.2"
+version = "1.1.0"
 edition = "2024"
 
 [features]
@@ -29,17 +29,22 @@ url = "2.5"
 # --- Desktop ---
 [target.'cfg(not(target_os = "android"))'.dependencies]
 rfd   = "0.18"
-slint = { version = "1.18", features = ["backend-winit", "renderer-femtovg"] }
+slint = { version = "1.19", features = ["backend-winit", "renderer-femtovg"] }
 
 # --- Android ---
 [target.'cfg(target_os = "android")'.dependencies]
-slint            = { version = "1.18", features = ["backend-android-activity-06", "renderer-skia"] }
+slint            = { version = "1.19", features = ["backend-android-activity-06", "renderer-skia"] }
 android-activity = { version = "0.6.1", features = ["native-activity"] }
-webpki-roots     = "1.0.11"
+image            = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+jni              = "0.22"
+ndk-sys          = "0.6"
+ocrs             = { version = "0.14", features = ["onnx", "rten"] }
+rten             = "0.28"
+webpki-roots     = "1.0.12"
 rustls           = { version = "0.23", features = ["aws_lc_rs"] }
 
 [build-dependencies]
-slint-build = "1.17"
+slint-build = "1.19"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 winresource = "0.1"
@@ -47,6 +52,7 @@ winresource = "0.1"
 [package.metadata.android]
 package   = "io.github.promethyxx.oxyshop"
 resources = "assets/res"
+assets    = "assets/models"
 
 [package.metadata.android.sdk]
 min_sdk_version    = 28
@@ -54,6 +60,13 @@ target_sdk_version = 36
 
 [[package.metadata.android.uses_permission]]
 name = "android.permission.INTERNET"
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.CAMERA"
+
+[[package.metadata.android.uses_feature]]
+name     = "android.hardware.camera"
+required = false
 
 [package.metadata.android.application]
 label = "Oxyshop"

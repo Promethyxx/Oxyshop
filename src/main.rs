@@ -1,8 +1,18 @@
+#[cfg(target_os = "android")]
+mod camera;
 mod callbacks_config;
 mod callbacks_data;
 mod callbacks_expiry;
 mod data;
+#[cfg(target_os = "android")]
+mod dates;
 mod expiry;
+#[cfg(target_os = "android")]
+mod ocr;
+#[cfg(target_os = "android")]
+mod platform;
+#[cfg(target_os = "android")]
+mod scan;
 mod state;
 mod storage;
 
@@ -32,6 +42,7 @@ fn android_main(app: slint::android::AndroidApp) {
     if let Some(path) = app.internal_data_path() {
         storage::set_android_data_dir(path);
     }
+    platform::init(app.clone());
     if let Err(e) = slint::android::init(app) {
         eprintln!("Erreur d'initialisation Android : {e}");
         return;
@@ -97,6 +108,8 @@ fn run() {
     callbacks_data::setup(&ui, &app_state, &refresh_stock, &refresh_courses, &refresh_meals, &toast);
     callbacks_expiry::setup(&ui, &app_state, &refresh_stock, &refresh_courses, &refresh_expiry, &toast);
     callbacks_config::setup(&ui, &app_state, &refresh_stock, &refresh_courses, &refresh_sync, &toast);
+    #[cfg(target_os = "android")]
+    scan::setup(&ui);
 
     if let Err(e) = ui.run() {
         eprintln!("Erreur lors de l'exécution de l'interface : {e}");

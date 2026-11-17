@@ -1,0 +1,116 @@
+import { Palette } from "palette.slint";
+
+export component ScanView inherits Rectangle {
+    in-out property <bool> active: false;
+    in property <bool> lang-en: false;
+    in property <bool> busy: false;
+    in property <image> preview;
+    in property <string> status;
+    in property <[string]> results;
+    in property <length> top-inset: 0px;
+    in property <float> roi-x: 0.06;
+    in property <float> roi-y: 0.40;
+    in property <float> roi-w: 0.88;
+    in property <float> roi-h: 0.20;
+    callback shoot;
+    callback cancel;
+    callback pick(string);
+
+    visible: root.active;
+    background: #101010;
+    z: 300;
+
+    TouchArea { }
+
+    VerticalLayout {
+        padding: 12px;
+        padding-top: root.top-inset + 12px;
+        spacing: 12px;
+
+        Rectangle {
+            height: root.preview.width > 0 ? (root.width - 24px) * root.preview.height / root.preview.width : (root.width - 24px) * 4 / 3;
+            background: #000000;
+            clip: true;
+
+            Image {
+                source: root.preview;
+                width: 100%;
+                height: 100%;
+                image-fit: fill;
+            }
+
+            Rectangle {
+                x: parent.width * root.roi-x;
+                y: parent.height * root.roi-y;
+                width: parent.width * root.roi-w;
+                height: parent.height * root.roi-h;
+                border-width: 2px;
+                border-color: #5cd65c;
+                background: transparent;
+            }
+        }
+
+        Text {
+            text: root.status;
+            color: #b0b0b0;
+            font-size: 14px;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            height: 48px;
+            for date[i] in root.results : Rectangle {
+                horizontal-stretch: 1;
+                border-radius: 10px;
+                background: i == 0 ? (chip-ta.pressed ? #3f9f3f : #5cd65c) : (chip-ta.pressed ? #3a3a3a : #242424);
+
+                Text {
+                    text: date;
+                    color: i == 0 ? #101010 : #ffffff;
+                    font-size: 15px;
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                chip-ta := TouchArea { clicked => { root.pick(date); } }
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 10px;
+            height: 56px;
+
+            Rectangle {
+                horizontal-stretch: 1;
+                border-radius: 28px;
+                background: cancel-ta.pressed ? #3a3a3a : #242424;
+                Text {
+                    text: root.lang-en ? "Cancel" : "Annuler";
+                    color: #ffffff;
+                    font-size: 17px;
+                    font-weight: 600;
+                }
+                cancel-ta := TouchArea { clicked => { root.cancel(); } }
+            }
+
+            Rectangle {
+                horizontal-stretch: 2;
+                border-radius: 28px;
+                background: root.busy ? #3a3a3a : (shoot-ta.pressed ? #3f9f3f : #5cd65c);
+                Text {
+                    text: root.busy ? "…" : (root.lang-en ? "Scan" : "Scanner");
+                    color: #101010;
+                    font-size: 20px;
+                    font-weight: 700;
+                }
+                shoot-ta := TouchArea {
+                    enabled: !root.busy;
+                    clicked => { root.shoot(); }
+                }
+            }
+        }
+    }
+}
