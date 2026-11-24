@@ -125,6 +125,14 @@ pub struct DavConfig {
     pub backup_local: bool,
     #[serde(default = "default_true")]
     pub backup_webdav: bool,
+    #[serde(default = "default_true")]
+    pub tab_menu: bool,
+    #[serde(default = "default_true")]
+    pub tab_stock: bool,
+    #[serde(default = "default_true")]
+    pub tab_expiry: bool,
+    #[serde(default = "default_true")]
+    pub tab_courses: bool,
 }
 
 impl Default for DavConfig {
@@ -140,6 +148,10 @@ impl Default for DavConfig {
             data_dir: String::new(),
             backup_local: true,
             backup_webdav: true,
+            tab_menu: true,
+            tab_stock: true,
+            tab_expiry: true,
+            tab_courses: true,
         }
     }
 }

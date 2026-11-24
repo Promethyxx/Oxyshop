@@ -153,6 +153,24 @@ fn populate_initial(ui: &AppWindow, app_state: &Arc<Mutex<App>>) {
     ui.set_cfg_backup_dir_display(st.config.backup_dir_display().into());
     ui.set_cfg_data_dir_edit(st.config.data_dir.clone().into());
 
+    ui.set_cfg_tab_menu(st.config.tab_menu);
+    ui.set_cfg_tab_stock(st.config.tab_stock);
+    ui.set_cfg_tab_expiry(st.config.tab_expiry);
+    ui.set_cfg_tab_courses(st.config.tab_courses);
+    ui.set_current_tab(
+        if st.config.tab_stock {
+            Tab::Stock
+        } else if st.config.tab_menu {
+            Tab::Menu
+        } else if st.config.tab_expiry {
+            Tab::Expiry
+        } else if st.config.tab_courses {
+            Tab::Courses
+        } else {
+            Tab::Config
+        },
+    );
+
     ui.set_sync_state(st.sync_state_int());
     ui.set_sync_label(st.sync_label());
 }

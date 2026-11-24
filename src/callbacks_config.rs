@@ -404,6 +404,22 @@ pub fn setup(
         }
     });
 
+    ui.on_cfg_set_tab({
+        let app = app_state.clone();
+        move |idx, val| {
+            let mut st = lock_app(&app);
+            match idx {
+                0 => st.config.tab_menu = val,
+                1 => st.config.tab_stock = val,
+                2 => st.config.tab_expiry = val,
+                _ => st.config.tab_courses = val,
+            }
+            if let Err(e) = save_cfg(&st.config) {
+                eprintln!("Écriture config échouée : {e}");
+            }
+        }
+    });
+
     // ── Backup à la fermeture ─────────────────────────────────────────────
 
     ui.window().on_close_requested({

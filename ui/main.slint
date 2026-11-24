@@ -156,12 +156,17 @@ export component AppWindow inherits Window {
     // ── Backup ─────────────────────────────────────────────────────────────
     in-out property <bool>   cfg-backup-local:       true;
     in-out property <bool>   cfg-backup-webdav:      true;
+    in-out property <bool>   cfg-tab-menu:           true;
+    in-out property <bool>   cfg-tab-stock:          true;
+    in-out property <bool>   cfg-tab-expiry:         true;
+    in-out property <bool>   cfg-tab-courses:        true;
     in-out property <string> cfg-data-dir-edit:      "";
     in property <string>     cfg-data-dir-display:   "";
     in property <string>     cfg-backup-dir-display: "";
     callback cfg-set-backup-local(bool);
     callback cfg-set-backup-webdav(bool);
     callback cfg-set-data-dir(string);
+    callback cfg-set-tab(int, bool);
 
     // ── Export / Import ────────────────────────────────────────────────────
     callback cfg-export;
@@ -318,6 +323,10 @@ export component AppWindow inherits Window {
                 lang-en:         root.lang-en;
                 backup-local     <=> root.cfg-backup-local;
                 backup-webdav    <=> root.cfg-backup-webdav;
+                tab-menu         <=> root.cfg-tab-menu;
+                tab-stock        <=> root.cfg-tab-stock;
+                tab-expiry       <=> root.cfg-tab-expiry;
+                tab-courses      <=> root.cfg-tab-courses;
                 data-dir-edit    <=> root.cfg-data-dir-edit;
                 data-dir-display:    root.cfg-data-dir-display;
                 backup-dir-display:  root.cfg-backup-dir-display;
@@ -332,6 +341,7 @@ export component AppWindow inherits Window {
                 set-backup-local(v)  => { root.cfg-set-backup-local(v); }
                 set-backup-webdav(v) => { root.cfg-set-backup-webdav(v); }
                 set-data-dir(p)      => { root.cfg-set-data-dir(p); }
+                set-tab(i, v)        => { root.cfg-set-tab(i, v); }
             }
         }
 
@@ -343,7 +353,7 @@ export component AppWindow inherits Window {
             Rectangle { y: 0px; height: 1px; background: Palette.card-border; }
 
             HorizontalLayout {
-                tab-menu := Rectangle {
+                if root.cfg-tab-menu : tab-menu := Rectangle {
                     horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Menu : Rectangle {
                         y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
@@ -357,7 +367,7 @@ export component AppWindow inherits Window {
                     TouchArea { clicked => { root.current-tab = Tab.Menu; } }
                 }
 
-                tab-stock := Rectangle {
+                if root.cfg-tab-stock : tab-stock := Rectangle {
                     horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Stock : Rectangle {
                         y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
@@ -371,7 +381,7 @@ export component AppWindow inherits Window {
                     TouchArea { clicked => { root.current-tab = Tab.Stock; } }
                 }
 
-                tab-expiry := Rectangle {
+                if root.cfg-tab-expiry : tab-expiry := Rectangle {
                     horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Expiry : Rectangle {
                         y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
@@ -385,7 +395,7 @@ export component AppWindow inherits Window {
                     TouchArea { clicked => { root.current-tab = Tab.Expiry; root.expiry-opened(); } }
                 }
 
-                tab-courses := Rectangle {
+                if root.cfg-tab-courses : tab-courses := Rectangle {
                     horizontal-stretch: 1; background: transparent;
                     if current-tab == Tab.Courses : Rectangle {
                         y: 0px; height: 2px; x: parent.width * 0.2; width: parent.width * 0.6;
