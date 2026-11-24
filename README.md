@@ -36,18 +36,19 @@
 This project is licensed under the GNU General Public License v3.0 — see Licenses.md for details.
 
 ---
-# Roadmap
-
 ## 🟢 IN PROGRESS
-- Replace unmaintained crates with maintained alternatives
-- Add CHANGELOG.md
-  - Configure git-cliff
-- Add deny.toml
-- Add SECURITY.md
+- chore:
+  - Replace unmaintained crates with maintained alternatives
+  - Add deny.toml
+- docs:
+  - Add CHANGELOG.md
+    - Configure git-cliff
+  - Add SECURITY.md
 
 ## 🟡 NEXT
 - WinGet release
 
 ## 🔵 LATER
-- Automate WinGet updates through CI pull requests
+- ci:  
+  - Automate WinGet updates through CI pull requests
 ---
