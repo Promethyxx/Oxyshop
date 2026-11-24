@@ -36,12 +36,18 @@
 This project is licensed under the GNU General Public License v3.0 — see Licenses.md for details.
 
 ---
-## Roadmap
-## 🔴 NOW
+# Roadmap
+
+## 🟢 IN PROGRESS
+- Replace unmaintained crates with maintained alternatives
+- Add CHANGELOG.md
+  - Configure git-cliff
+- Add deny.toml
+- Add SECURITY.md
+
 ## 🟡 NEXT
- - ### Release:
-    - Chocolatey
-    - MS Store
-    - Winget
+- WinGet release
+
 ## 🔵 LATER
+- Automate WinGet updates through CI pull requests
 ---
