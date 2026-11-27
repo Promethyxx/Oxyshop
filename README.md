@@ -41,8 +41,6 @@ This project is licensed under the GNU General Public License v3.0 — see Licen
   - Replace unmaintained crates with maintained alternatives
   - Add deny.toml
 - docs:
-  - Add CHANGELOG.md
-    - Configure git-cliff
   - Add SECURITY.md
 
 ## 🟡 NEXT
