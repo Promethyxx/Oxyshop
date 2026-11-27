@@ -159,8 +159,9 @@ jobs:
       uses: android-actions/setup-android@v4
     - name: Install Android NDK and Platform
       run: |
-        sdkmanager "ndk;29.0.14206865" "platforms;android-36"
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/29.0.14206865" >> $GITHUB_ENV
+        sdkmanager "ndk;30.0.14904198" "platforms;android-36"
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/30.0.14904198" >> $GITHUB_ENV
+        echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/30.0.14904198" >> $GITHUB_ENV
     - name: Setup keystore
       env:
         KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE }}
@@ -175,6 +176,7 @@ jobs:
       run: cargo apk build --release --lib
       env:
         ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+        ANDROID_NDK_ROOT: ${{ env.ANDROID_NDK_HOME }}
     - name: Rename APK
       run: |
         mkdir -p apk_out
