@@ -42,7 +42,8 @@ This project is licensed under the GNU General Public License v3.0 — see Licen
   - Add deny.toml
 - docs:
   - Add SECURITY.md
-
+- fix:
+  - Unexpected Behavior Shopping
 ## 🟡 NEXT
 - WinGet release
 
